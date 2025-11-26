@@ -1,0 +1,87 @@
+'use client'
+
+import { useCart } from '@/context/CartContext'
+import { useState } from 'react'
+import { pakasir } from '@/lib/pakasir'
+import { useRouter } from 'next/navigation'
+
+export default function Checkout() {
+    const { items, total, clearCart } = useCart()
+    const [shippingCost, setShippingCost] = useState(10000) // Default flat rate
+    const [loading, setLoading] = useState(false)
+    const router = useRouter()
+
+    const handlePayment = async () => {
+        setLoading(true)
+        try {
+            // Create order in backend (mock for now)
+            const orderId = `ORDER-${Date.now()}`
+            const finalTotal = total + shippingCost
+
+            const transaction = await pakasir.createTransaction(finalTotal, orderId)
+
+            if (transaction.url) {
+                // In a real app, redirect to payment URL
+                alert(`Redirecting to Pakasir: ${transaction.url}`)
+                clearCart()
+                router.push('/') // Redirect home for now
+            }
+        } catch (error) {
+            console.error('Payment failed', error)
+            alert('Payment failed')
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    if (items.length === 0) {
+        return <div>Your cart is empty</div>
+    }
+
+    return (
+        <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+            <div className="px-4 py-5 sm:px-6">
+                <h2 className="text-lg leading-6 font-medium text-gray-900">Checkout</h2>
+            </div>
+            <div className="border-t border-gray-200 px-4 py-5 sm:px-6">
+                <dl className="grid grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2">
+                    <div className="sm:col-span-2">
+                        <dt className="text-sm font-medium text-gray-500">Order Summary</dt>
+                        <dd className="mt-1 text-sm text-gray-900">
+                            <ul className="border-b border-gray-200 pb-4 mb-4">
+                                {items.map(item => (
+                                    <li key={item.id} className="flex justify-between py-2">
+                                        <span>{item.name} x {item.quantity}</span>
+                                        <span>Rp {(item.price * item.quantity).toLocaleString()}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                            <div className="flex justify-between py-2">
+                                <span>Subtotal</span>
+                                <span>Rp {total.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between py-2">
+                                <span>Shipping (Local)</span>
+                                <span>Rp {shippingCost.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between py-2 font-bold text-lg">
+                                <span>Total</span>
+                                <span>Rp {(total + shippingCost).toLocaleString()}</span>
+                            </div>
+                        </dd>
+                    </div>
+
+                    <div className="sm:col-span-2">
+                        <button
+                            onClick={handlePayment}
+                            disabled={loading}
+                            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-400"
+                        >
+                            {loading ? 'Processing...' : 'Pay with Pakasir'}
+                        </button>
+                    </div>
+                </dl>
+            </div>
+        </div>
+    )
+}
