@@ -3,12 +3,13 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import AuthGuard from '@/components/AuthGuard'
-import { Save, Building2, Mail, Phone, MapPin } from 'lucide-react'
+import { Save, Building2, Mail, Phone, MapPin, CreditCard, Banknote, QrCode, Landmark } from 'lucide-react'
 import { useToast } from '@/context/ToastContext'
 import { useSettings } from '@/context/SettingsContext'
 
 export default function GeneralSettingsPage() {
     const [loading, setLoading] = useState(false)
+    const [activeTab, setActiveTab] = useState<'store' | 'gateway'>('store')
     const { generalSettings, updateGeneralSettings } = useSettings()
     const [settings, setSettings] = useState({
         storeName: '',
@@ -17,11 +18,18 @@ export default function GeneralSettingsPage() {
         storeAddress: '',
         taxRate: '11',
         currency: 'IDR',
-        pakasirMerchantCode: '',
-        pakasirApiKey: '',
-        pakasirCallbackUrl: '',
-        pakasirReturnUrl: '',
-        pakasirSandboxMode: true
+        duitkuMerchantCode: '',
+        duitkuApiKey: '',
+        duitkuCallbackUrl: '',
+        duitkuReturnUrl: '',
+        duitkuSandboxMode: true,
+        bankName: 'BCA',
+        bankAccountNumber: '1234567890',
+        bankAccountName: 'APOTIK POS',
+        enableCash: true,
+        enableCard: true,
+        enableQris: true,
+        enableTransfer: true
     })
     const supabase = createClient()
     const { showToast } = useToast()
@@ -57,9 +65,41 @@ export default function GeneralSettingsPage() {
                     <p className="text-gray-600 mt-2">Kelola pengaturan umum toko Anda</p>
                 </div>
 
+                {/* Tabs */}
+                <div className="mb-6">
+                    <div className="border-b border-gray-200">
+                        <nav className="-mb-px flex space-x-8">
+                            <button
+                                onClick={() => setActiveTab('store')}
+                                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                                    activeTab === 'store'
+                                        ? 'border-blue-500 text-blue-600'
+                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                }`}
+                            >
+                                <Building2 className="inline h-5 w-5 mr-2" />
+                                Informasi Toko
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('gateway')}
+                                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                                    activeTab === 'gateway'
+                                        ? 'border-blue-500 text-blue-600'
+                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                }`}
+                            >
+                                <QrCode className="inline h-5 w-5 mr-2" />
+                                Payment Gateway
+                            </button>
+                        </nav>
+                    </div>
+                </div>
+
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
                     <form onSubmit={handleSubmit} className="space-y-6">
-                        {/* Store Information */}
+                        {/* Store Information Tab */}
+                        {activeTab === 'store' && (
+                        <>
                         <div>
                             <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
                                 <Building2 className="h-5 w-5 mr-2 text-blue-600" />
@@ -153,26 +193,94 @@ export default function GeneralSettingsPage() {
                                 </div>
                             </div>
                         </div>
+                        </>
+                        )}
 
-                        {/* Payment Gateway - Pakasir */}
+                        {/* Payment Gateway Tab */}
+                        {activeTab === 'gateway' && (
+                        <div>
+                        {/* Bank Transfer Configuration */}
+                        <div className="mb-8 p-6 bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-3">
+                                    <Landmark className="h-8 w-8 text-green-600" />
+                                    <div>
+                                        <h3 className="text-lg font-bold text-gray-900">Transfer Bank Manual</h3>
+                                        <p className="text-sm text-gray-600">Konfigurasi rekening bank untuk pembayaran manual</p>
+                                    </div>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={settings.enableTransfer}
+                                        onChange={(e) => setSettings({ ...settings, enableTransfer: e.target.checked })}
+                                        className="sr-only peer"
+                                    />
+                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                                </label>
+                            </div>
+                            
+                            {settings.enableTransfer && (
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Nama Bank
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={settings.bankName}
+                                            onChange={(e) => setSettings({ ...settings, bankName: e.target.value })}
+                                            placeholder="Contoh: BCA"
+                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Nomor Rekening
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={settings.bankAccountNumber}
+                                            onChange={(e) => setSettings({ ...settings, bankAccountNumber: e.target.value })}
+                                            placeholder="1234567890"
+                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white font-mono"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Atas Nama
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={settings.bankAccountName}
+                                            onChange={(e) => setSettings({ ...settings, bankAccountName: e.target.value })}
+                                            placeholder="APOTIK POS"
+                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Payment Gateway - Duitku */}
                         <div className="pt-6 border-t border-gray-200">
                             <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
                                 <svg className="h-6 w-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                                 </svg>
-                                Payment Gateway - Pakasir
+                                Payment Gateway - Duitku
                             </h2>
                             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                                 <p className="text-sm text-blue-800 mb-2">
-                                    <strong>Info:</strong> Konfigurasi payment gateway Pakasir untuk menerima pembayaran QRIS, Virtual Account, E-Wallet, dan metode lainnya.
+                                    <strong>Info:</strong> Konfigurasi payment gateway Duitku untuk menerima pembayaran QRIS, Virtual Account, E-Wallet, dan metode lainnya.
                                 </p>
                                 <a 
-                                    href="https://pakasir.com/p/docs" 
+                                    href="https://docs.duitku.com" 
                                     target="_blank" 
                                     rel="noopener noreferrer"
                                     className="text-sm text-blue-600 hover:text-blue-800 underline"
                                 >
-                                    📖 Baca Dokumentasi Pakasir →
+                                    📖 Baca Dokumentasi Duitku →
                                 </a>
                             </div>
                             <div className="space-y-4">
@@ -182,13 +290,13 @@ export default function GeneralSettingsPage() {
                                     </label>
                                     <input
                                         type="text"
-                                        value={settings.pakasirMerchantCode}
-                                        onChange={(e) => setSettings({ ...settings, pakasirMerchantCode: e.target.value })}
-                                        placeholder="Contoh: MERCHANT123"
+                                        value={settings.duitkuMerchantCode}
+                                        onChange={(e) => setSettings({ ...settings, duitkuMerchantCode: e.target.value })}
+                                        placeholder="Contoh: D1234"
                                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
                                     />
                                     <p className="text-xs text-gray-500 mt-1">
-                                        Merchant Code dari dashboard Pakasir
+                                        Merchant Code dari dashboard Duitku
                                     </p>
                                 </div>
                                 <div>
@@ -197,13 +305,13 @@ export default function GeneralSettingsPage() {
                                     </label>
                                     <input
                                         type="password"
-                                        value={settings.pakasirApiKey}
-                                        onChange={(e) => setSettings({ ...settings, pakasirApiKey: e.target.value })}
+                                        value={settings.duitkuApiKey}
+                                        onChange={(e) => setSettings({ ...settings, duitkuApiKey: e.target.value })}
                                         placeholder="••••••••••••••••"
                                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
                                     />
                                     <p className="text-xs text-gray-500 mt-1">
-                                        API Key dari dashboard Pakasir (rahasia)
+                                        API Key dari dashboard Duitku (rahasia)
                                     </p>
                                 </div>
                                 <div>
@@ -212,13 +320,13 @@ export default function GeneralSettingsPage() {
                                     </label>
                                     <input
                                         type="url"
-                                        value={settings.pakasirCallbackUrl}
-                                        onChange={(e) => setSettings({ ...settings, pakasirCallbackUrl: e.target.value })}
+                                        value={settings.duitkuCallbackUrl}
+                                        onChange={(e) => setSettings({ ...settings, duitkuCallbackUrl: e.target.value })}
                                         placeholder="https://your-domain.com/api/payment/callback"
                                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
                                     />
                                     <p className="text-xs text-gray-500 mt-1">
-                                        URL untuk menerima notifikasi pembayaran dari Pakasir
+                                        URL untuk menerima notifikasi pembayaran dari Duitku
                                     </p>
                                 </div>
                                 <div>
@@ -227,8 +335,8 @@ export default function GeneralSettingsPage() {
                                     </label>
                                     <input
                                         type="url"
-                                        value={settings.pakasirReturnUrl}
-                                        onChange={(e) => setSettings({ ...settings, pakasirReturnUrl: e.target.value })}
+                                        value={settings.duitkuReturnUrl}
+                                        onChange={(e) => setSettings({ ...settings, duitkuReturnUrl: e.target.value })}
                                         placeholder="https://your-domain.com/payment/success"
                                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
                                     />
@@ -248,23 +356,25 @@ export default function GeneralSettingsPage() {
                                     <label className="relative inline-flex items-center cursor-pointer">
                                         <input
                                             type="checkbox"
-                                            checked={settings.pakasirSandboxMode}
-                                            onChange={(e) => setSettings({ ...settings, pakasirSandboxMode: e.target.checked })}
+                                            checked={settings.duitkuSandboxMode}
+                                            onChange={(e) => setSettings({ ...settings, duitkuSandboxMode: e.target.checked })}
                                             className="sr-only peer"
                                         />
                                         <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                         <span className="ml-3 text-sm font-medium text-gray-900">
-                                            {settings.pakasirSandboxMode ? 'Sandbox' : 'Production'}
+                                            {settings.duitkuSandboxMode ? 'Sandbox' : 'Production'}
                                         </span>
                                     </label>
                                 </div>
                                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                                     <p className="text-sm text-yellow-800">
-                                        <strong>⚠️ Penting:</strong> Pastikan Callback URL dan Return URL sudah terdaftar di dashboard Pakasir untuk keamanan.
+                                        <strong>⚠️ Penting:</strong> Pastikan Callback URL dan Return URL sudah terdaftar di dashboard Duitku untuk keamanan.
                                     </p>
                                 </div>
                             </div>
                         </div>
+                        </div>
+                        )}
 
                         {/* Save Button */}
                         <div className="pt-6 border-t border-gray-200">

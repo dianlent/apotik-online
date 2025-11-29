@@ -10,11 +10,19 @@ interface GeneralSettings {
     storeAddress: string
     taxRate: string
     currency: string
-    pakasirMerchantCode: string
-    pakasirApiKey: string
-    pakasirCallbackUrl: string
-    pakasirReturnUrl: string
-    pakasirSandboxMode: boolean
+    duitkuMerchantCode: string
+    duitkuApiKey: string
+    duitkuCallbackUrl: string
+    duitkuReturnUrl: string
+    duitkuSandboxMode: boolean
+    // Payment Methods
+    bankName: string
+    bankAccountNumber: string
+    bankAccountName: string
+    enableCash: boolean
+    enableCard: boolean
+    enableQris: boolean
+    enableTransfer: boolean
 }
 
 interface SettingsContextType {
@@ -30,11 +38,19 @@ const defaultSettings: GeneralSettings = {
     storeAddress: 'Jl. Kesehatan No. 123, Jakarta',
     taxRate: '11',
     currency: 'IDR',
-    pakasirMerchantCode: '',
-    pakasirApiKey: '',
-    pakasirCallbackUrl: '',
-    pakasirReturnUrl: '',
-    pakasirSandboxMode: true
+    duitkuMerchantCode: '',
+    duitkuApiKey: '',
+    duitkuCallbackUrl: '',
+    duitkuReturnUrl: '',
+    duitkuSandboxMode: true,
+    // Payment Methods
+    bankName: 'BCA',
+    bankAccountNumber: '1234567890',
+    bankAccountName: 'APOTIK POS',
+    enableCash: true,
+    enableCard: true,
+    enableQris: true,
+    enableTransfer: true
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined)

@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createPakasirClient } from '@/lib/pakasir'
+import { createDuitkuClient } from '@/lib/duitku'
 
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json()
         const signature = request.headers.get('X-Signature') || ''
 
-        console.log('Pakasir Webhook received:', body)
+        console.log('Duitku Webhook received:', body)
 
-        // Get Pakasir settings from database
+        // Get Duitku settings from database
         const supabase = await createClient()
         const { data: settingsData } = await supabase
             .from('settings')
@@ -26,16 +26,17 @@ export async function POST(request: NextRequest) {
 
         const settings = settingsData.value as any
 
-        // Create Pakasir client for signature verification
-        const pakasir = createPakasirClient({
-            merchantId: settings.pakasirMerchantId,
-            apiKey: settings.pakasirApiKey,
-            secretKey: settings.pakasirSecretKey,
-            isSandbox: settings.pakasirSandboxMode
+        // Create Duitku client for signature verification
+        const duitku = createDuitkuClient({
+            merchantCode: settings.duitkuMerchantCode || '',
+            apiKey: settings.duitkuApiKey || '',
+            callbackUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/payment/callback`,
+            returnUrl: `${process.env.NEXT_PUBLIC_APP_URL}/payment/success`,
+            isSandbox: settings.duitkuSandboxMode
         })
 
         // Verify signature
-        const isValid = pakasir.verifyCallback(body, signature)
+        const isValid = duitku.verifyCallback(body, signature)
         if (!isValid) {
             console.error('Invalid signature')
             return NextResponse.json(
@@ -46,35 +47,50 @@ export async function POST(request: NextRequest) {
 
         // Extract data from callback
         const {
-            order_id,
+            merchantOrderId,
             reference,
-            status,
+            resultCode,
             amount,
-            payment_method,
-            paid_at
+            paymentCode,
+            merchantUserId
         } = body
 
         console.log('Payment callback:', {
-            order_id,
+            merchantOrderId,
             reference,
-            status,
+            resultCode,
             amount,
-            payment_method
+            paymentCode
         })
 
         // Update order status based on payment status
-        if (status === 'success' || status === 'paid') {
-            // Find order by order_id (you may need to store this in your orders table)
-            // For now, we'll create a payment record
+        // resultCode '00' means success in Duitku
+        if (resultCode === '00') {
+            // Find order by merchantOrderId and update status
+            const { error: orderError } = await supabase
+                .from('orders')
+                .update({
+                    status: 'paid',
+                    payment_reference: reference,
+                    payment_method: paymentCode,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', merchantOrderId)
+
+            if (orderError) {
+                console.error('Error updating order:', orderError)
+            }
+
+            // Create payment record
             const { error: paymentError } = await supabase
                 .from('payments')
                 .insert({
-                    order_id: order_id,
+                    order_id: merchantOrderId,
                     reference: reference,
-                    amount: amount,
-                    payment_method: payment_method,
+                    amount: parseFloat(amount),
+                    payment_method: paymentCode,
                     status: 'success',
-                    paid_at: paid_at,
+                    paid_at: new Date().toISOString(),
                     callback_data: body
                 })
 
@@ -107,7 +123,7 @@ export async function POST(request: NextRequest) {
 // Handle GET request (for testing)
 export async function GET() {
     return NextResponse.json({
-        message: 'Pakasir Webhook Endpoint',
+        message: 'Duitku Webhook Endpoint',
         url: '/api/payment/callback',
         method: 'POST'
     })

@@ -4,6 +4,9 @@ const nextConfig: NextConfig = {
   /* config options here */
   reactCompiler: true,
   
+  // Allow cross-origin requests from local network
+  allowedDevOrigins: ['192.168.18.13'],
+  
   // Vercel-friendly configuration
   images: {
     domains: ['res-5.cloudinary.com', 'api.qrserver.com'],

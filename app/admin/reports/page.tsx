@@ -5,6 +5,18 @@ import { createClient } from '@/lib/supabase/client'
 import AuthGuard from '@/components/AuthGuard'
 import { TrendingUp, DollarSign, ShoppingCart, Package, Calendar, Download, Filter } from 'lucide-react'
 import { useToast } from '@/context/ToastContext'
+import { Line } from 'react-chartjs-2'
+import {
+    Chart as ChartJS,
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    LineElement,
+    Title,
+    Tooltip,
+    Legend,
+    Filler
+} from 'chart.js'
 
 interface SalesStats {
     totalRevenue: number
@@ -25,6 +37,18 @@ interface DailySales {
     total_revenue: number
     total_orders: number
 }
+
+// Register Chart.js components
+ChartJS.register(
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    LineElement,
+    Title,
+    Tooltip,
+    Legend,
+    Filler
+)
 
 export default function ReportsPage() {
     const [loading, setLoading] = useState(true)
@@ -300,9 +324,128 @@ export default function ReportsPage() {
                                 </div>
                             </div>
 
-                            {/* Daily Sales Chart */}
+                            {/* Daily Sales Charts */}
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                                {/* Revenue Chart */}
+                                <div className="bg-white rounded-xl shadow-sm p-6">
+                                    <h2 className="text-xl font-bold text-gray-900 mb-6">Grafik Pendapatan Harian</h2>
+                                    <div className="h-80">
+                                        <Line
+                                            data={{
+                                                labels: dailySales.map(day => 
+                                                    new Date(day.date).toLocaleDateString('id-ID', { 
+                                                        month: 'short', 
+                                                        day: 'numeric' 
+                                                    })
+                                                ),
+                                                datasets: [
+                                                    {
+                                                        label: 'Pendapatan (Rp)',
+                                                        data: dailySales.map(day => day.total_revenue),
+                                                        borderColor: 'rgb(34, 197, 94)',
+                                                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                                                        fill: true,
+                                                        tension: 0.4,
+                                                        pointRadius: 4,
+                                                        pointHoverRadius: 6,
+                                                        pointBackgroundColor: 'rgb(34, 197, 94)',
+                                                        pointBorderColor: '#fff',
+                                                        pointBorderWidth: 2,
+                                                    }
+                                                ]
+                                            }}
+                                            options={{
+                                                responsive: true,
+                                                maintainAspectRatio: false,
+                                                plugins: {
+                                                    legend: {
+                                                        display: true,
+                                                        position: 'top' as const,
+                                                    },
+                                                    tooltip: {
+                                                        callbacks: {
+                                                            label: function(context) {
+                                                                return 'Rp ' + (context.parsed.y ?? 0).toLocaleString()
+                                                            }
+                                                        }
+                                                    }
+                                                },
+                                                scales: {
+                                                    y: {
+                                                        beginAtZero: true,
+                                                        ticks: {
+                                                            callback: function(value) {
+                                                                return 'Rp ' + Number(value).toLocaleString()
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Orders Chart */}
+                                <div className="bg-white rounded-xl shadow-sm p-6">
+                                    <h2 className="text-xl font-bold text-gray-900 mb-6">Grafik Jumlah Pesanan</h2>
+                                    <div className="h-80">
+                                        <Line
+                                            data={{
+                                                labels: dailySales.map(day => 
+                                                    new Date(day.date).toLocaleDateString('id-ID', { 
+                                                        month: 'short', 
+                                                        day: 'numeric' 
+                                                    })
+                                                ),
+                                                datasets: [
+                                                    {
+                                                        label: 'Jumlah Pesanan',
+                                                        data: dailySales.map(day => day.total_orders),
+                                                        borderColor: 'rgb(59, 130, 246)',
+                                                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                                        fill: true,
+                                                        tension: 0.4,
+                                                        pointRadius: 4,
+                                                        pointHoverRadius: 6,
+                                                        pointBackgroundColor: 'rgb(59, 130, 246)',
+                                                        pointBorderColor: '#fff',
+                                                        pointBorderWidth: 2,
+                                                    }
+                                                ]
+                                            }}
+                                            options={{
+                                                responsive: true,
+                                                maintainAspectRatio: false,
+                                                plugins: {
+                                                    legend: {
+                                                        display: true,
+                                                        position: 'top' as const,
+                                                    },
+                                                    tooltip: {
+                                                        callbacks: {
+                                                            label: function(context) {
+                                                                return (context.parsed.y ?? 0) + ' pesanan'
+                                                            }
+                                                        }
+                                                    }
+                                                },
+                                                scales: {
+                                                    y: {
+                                                        beginAtZero: true,
+                                                        ticks: {
+                                                            stepSize: 1
+                                                        }
+                                                    }
+                                                }
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Daily Sales Table */}
                             <div className="bg-white rounded-xl shadow-sm p-6">
-                                <h2 className="text-xl font-bold text-gray-900 mb-6">Penjualan Harian</h2>
+                                <h2 className="text-xl font-bold text-gray-900 mb-6">Detail Penjualan Harian</h2>
                                 <div className="space-y-4">
                                     {dailySales.map((day) => (
                                         <div key={day.date} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">

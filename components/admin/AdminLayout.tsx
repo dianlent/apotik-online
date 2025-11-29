@@ -270,7 +270,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                             </h2>
                         </div>
                         <div className="flex items-center space-x-4">
-                            <button className="p-2 hover:bg-gray-100 rounded-lg">
+                            <button 
+                                onClick={() => router.push('/admin/settings/general')}
+                                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                                title="Settings"
+                            >
                                 <Settings className="h-5 w-5 text-gray-600" />
                             </button>
                         </div>

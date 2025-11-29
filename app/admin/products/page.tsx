@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import AuthGuard from '@/components/AuthGuard'
 import { Product } from '@/types'
 import { Plus, Edit, Trash2, Search } from 'lucide-react'
 import { useToast } from '@/context/ToastContext'
+import JsBarcode from 'jsbarcode'
 
 interface Category {
     id: string
@@ -34,6 +35,8 @@ export default function AdminProductsPage() {
     const [imagePreview, setImagePreview] = useState<string>('')
     const [barcodeExists, setBarcodeExists] = useState(false)
     const [checkingBarcode, setCheckingBarcode] = useState(false)
+    const [barcodeError, setBarcodeError] = useState('')
+    const barcodeCanvasRef = useRef<HTMLCanvasElement>(null)
     const supabase = createClient()
     const { showToast } = useToast()
 
@@ -41,6 +44,16 @@ export default function AdminProductsPage() {
         loadProducts()
         loadCategories()
     }, [])
+
+    // Generate barcode image when barcode changes and is valid
+    useEffect(() => {
+        if (formData.barcode && validateEAN13(formData.barcode) && !barcodeError && !barcodeExists) {
+            // Small delay to ensure canvas is rendered
+            setTimeout(() => {
+                generateBarcodeImage(formData.barcode)
+            }, 100)
+        }
+    }, [formData.barcode, barcodeError, barcodeExists])
 
     async function loadProducts() {
         setLoading(true)
@@ -113,12 +126,97 @@ export default function AdminProductsPage() {
         setImagePreview('')
         setBarcodeExists(false)
         setCheckingBarcode(false)
+        setBarcodeError('')
+    }
+
+    // Validate EAN13 barcode
+    const validateEAN13 = (barcode: string): boolean => {
+        if (!barcode) return true // Empty is valid (optional field)
+        
+        // EAN13 must be exactly 13 digits
+        if (!/^\d{13}$/.test(barcode)) {
+            return false
+        }
+
+        // Calculate checksum
+        const digits = barcode.split('').map(Number)
+        const checkDigit = digits[12]
+        
+        let sum = 0
+        for (let i = 0; i < 12; i++) {
+            sum += digits[i] * (i % 2 === 0 ? 1 : 3)
+        }
+        
+        const calculatedCheck = (10 - (sum % 10)) % 10
+        return checkDigit === calculatedCheck
+    }
+
+    // Generate random EAN13 barcode
+    const generateEAN13 = (): string => {
+        // Use country code 899 (for free assignment)
+        let barcode = '899'
+        
+        // Add 9 random digits
+        for (let i = 0; i < 9; i++) {
+            barcode += Math.floor(Math.random() * 10)
+        }
+        
+        // Calculate check digit
+        const digits = barcode.split('').map(Number)
+        let sum = 0
+        for (let i = 0; i < 12; i++) {
+            sum += digits[i] * (i % 2 === 0 ? 1 : 3)
+        }
+        const checkDigit = (10 - (sum % 10)) % 10
+        
+        return barcode + checkDigit
+    }
+
+    // Generate barcode image
+    const generateBarcodeImage = (barcode: string) => {
+        if (!barcode || !barcodeCanvasRef.current) return
+        
+        try {
+            JsBarcode(barcodeCanvasRef.current, barcode, {
+                format: 'EAN13',
+                width: 2,
+                height: 80,
+                displayValue: true,
+                fontSize: 14,
+                margin: 10
+            })
+        } catch (error) {
+            console.error('Error generating barcode image:', error)
+        }
+    }
+
+    // Download barcode as image
+    const downloadBarcode = () => {
+        if (!barcodeCanvasRef.current) return
+        
+        const link = document.createElement('a')
+        link.download = `barcode-${formData.barcode}.png`
+        link.href = barcodeCanvasRef.current.toDataURL()
+        link.click()
+        showToast('Barcode berhasil didownload', 'success')
     }
 
     const checkBarcodeExists = async (barcode: string) => {
         if (!barcode) {
             setBarcodeExists(false)
+            setBarcodeError('')
             return
+        }
+
+        // Validate EAN13 format
+        if (!validateEAN13(barcode)) {
+            setBarcodeError('Barcode harus format EAN13 (13 digit dengan checksum valid)')
+            setBarcodeExists(false)
+            return
+        } else {
+            setBarcodeError('')
+            // Generate barcode image if valid
+            generateBarcodeImage(barcode)
         }
 
         setCheckingBarcode(true)
@@ -183,8 +281,14 @@ export default function AdminProductsPage() {
         e.preventDefault()
 
         try {
-            // Validate barcode uniqueness if provided
+            // Validate barcode format and uniqueness if provided
             if (formData.barcode) {
+                // Validate EAN13 format
+                if (!validateEAN13(formData.barcode)) {
+                    showToast('Barcode harus format EAN13 yang valid (13 digit)', 'error')
+                    return
+                }
+
                 const { data: existingProduct } = await supabase
                     .from('products')
                     .select('id')
@@ -521,37 +625,86 @@ export default function AdminProductsPage() {
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Barcode
+                                        Barcode EAN13
                                     </label>
-                                    <div className="relative">
-                                        <input
-                                            type="text"
-                                            value={formData.barcode}
-                                            onChange={(e) => {
-                                                setFormData({ ...formData, barcode: e.target.value })
-                                                checkBarcodeExists(e.target.value)
+                                    <div className="flex gap-2">
+                                        <div className="flex-1 relative">
+                                            <input
+                                                type="text"
+                                                value={formData.barcode}
+                                                onChange={(e) => {
+                                                    const value = e.target.value.replace(/\D/g, '').slice(0, 13)
+                                                    setFormData({ ...formData, barcode: value })
+                                                    checkBarcodeExists(value)
+                                                }}
+                                                placeholder="8992761123456"
+                                                maxLength={13}
+                                                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:border-transparent font-mono text-lg tracking-wider ${
+                                                    barcodeError || barcodeExists
+                                                        ? 'border-red-300 focus:ring-red-500' 
+                                                        : formData.barcode && validateEAN13(formData.barcode)
+                                                        ? 'border-green-300 focus:ring-green-500'
+                                                        : 'border-gray-300 focus:ring-blue-500'
+                                                }`}
+                                            />
+                                            {checkingBarcode && (
+                                                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const newBarcode = generateEAN13()
+                                                setFormData({ ...formData, barcode: newBarcode })
+                                                checkBarcodeExists(newBarcode)
                                             }}
-                                            placeholder="Contoh: 8992761123456"
-                                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:border-transparent font-mono ${
-                                                barcodeExists 
-                                                    ? 'border-red-300 focus:ring-red-500' 
-                                                    : 'border-gray-300 focus:ring-blue-500'
-                                            }`}
-                                        />
-                                        {checkingBarcode && (
-                                            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                                            </div>
-                                        )}
+                                            className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all whitespace-nowrap font-medium"
+                                        >
+                                            Generate
+                                        </button>
                                     </div>
-                                    {barcodeExists ? (
+                                    
+                                    {/* Barcode Preview */}
+                                    {formData.barcode && validateEAN13(formData.barcode) && !barcodeError && !barcodeExists && (
+                                        <div className="mt-3 p-4 bg-gradient-to-br from-green-50 to-blue-50 border-2 border-green-300 rounded-lg">
+                                            <div className="flex flex-col items-center gap-3">
+                                                <div className="bg-white p-3 rounded-lg shadow-sm">
+                                                    <canvas ref={barcodeCanvasRef}></canvas>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={downloadBarcode}
+                                                    className="px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg hover:from-blue-700 hover:to-cyan-700 transition-all text-sm font-medium flex items-center gap-2"
+                                                >
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                                    </svg>
+                                                    Download Barcode
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                    
+                                    {barcodeError ? (
+                                        <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                                            <span>⚠️</span>
+                                            {barcodeError}
+                                        </p>
+                                    ) : barcodeExists ? (
                                         <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
                                             <span>⚠️</span>
                                             Barcode sudah digunakan oleh produk lain
                                         </p>
+                                    ) : formData.barcode && validateEAN13(formData.barcode) ? (
+                                        <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                                            <span>✓</span>
+                                            Barcode EAN13 valid
+                                        </p>
                                     ) : (
                                         <p className="text-xs text-gray-500 mt-1">
-                                            Opsional - Untuk scan barcode di kasir
+                                            Format EAN13 (13 digit) - Opsional, klik Generate untuk otomatis
                                         </p>
                                     )}
                                 </div>
@@ -566,7 +719,7 @@ export default function AdminProductsPage() {
                                 </button>
                                 <button
                                     type="submit"
-                                    disabled={uploading || barcodeExists}
+                                    disabled={uploading || barcodeExists || !!barcodeError}
                                     className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                 >
                                     {uploading ? (

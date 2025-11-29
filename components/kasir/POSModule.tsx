@@ -7,8 +7,6 @@ import { Search, Scan, Trash2, Plus, Minus, ShoppingCart, Printer, X, Home, Layo
 import { useToast } from '@/context/ToastContext'
 import { useRouter } from 'next/navigation'
 import BarcodeScanner from './BarcodeScanner'
-import { createPakasirClient } from '@/lib/pakasir'
-import { useSettings } from '@/context/SettingsContext'
 
 export default function POSModule() {
     const [products, setProducts] = useState<Product[]>([])
@@ -30,7 +28,6 @@ export default function POSModule() {
     const supabase = createClient()
     const { showToast } = useToast()
     const router = useRouter()
-    const { generalSettings } = useSettings()
 
     const categories = ['ALL', 'Obat Umum', 'Obat Keras', 'Vitamin & Suplemen', 'Alat Kesehatan', 'Perawatan Tubuh']
 
@@ -180,47 +177,38 @@ export default function POSModule() {
     const generateQRIS = async () => {
         setLoadingQris(true)
         try {
-            // Check if Pakasir is configured
-            if (!generalSettings.pakasirMerchantCode || !generalSettings.pakasirApiKey) {
-                showToast('Pakasir belum dikonfigurasi. Silakan atur di Settings → General', 'error')
-                setLoadingQris(false)
-                return
-            }
-
-            if (!generalSettings.pakasirCallbackUrl || !generalSettings.pakasirReturnUrl) {
-                showToast('URL Callback dan Return belum diatur di Settings', 'error')
-                setLoadingQris(false)
-                return
-            }
-
-            // Create Pakasir client
-            const pakasir = createPakasirClient({
-                merchantCode: generalSettings.pakasirMerchantCode,
-                apiKey: generalSettings.pakasirApiKey,
-                callbackUrl: generalSettings.pakasirCallbackUrl,
-                returnUrl: generalSettings.pakasirReturnUrl,
-                isSandbox: generalSettings.pakasirSandboxMode
-            })
-
             // Generate order ID
             const orderId = `ORD-${Date.now()}`
 
-            // Create transaction
-            const result = await pakasir.createTransaction({
-                orderId,
-                amount: Math.round(calculateTotal()),
-                customerName: userName || 'Customer',
-                paymentMethod: 'qris'
+            // Get user email
+            const { data: { user } } = await supabase.auth.getUser()
+            const userEmail = user?.email || 'customer@example.com'
+
+            // Call server-side API to create QRIS
+            const response = await fetch('/api/payment/qris', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    orderId,
+                    amount: Math.round(calculateTotal()),
+                    customerName: userName || 'Customer',
+                    customerEmail: userEmail,
+                    productDetails: `Pembelian ${cart.length} item`
+                })
             })
+
+            const result = await response.json()
 
             if (result.success && result.data) {
                 setQrisData({
-                    qr_string: result.data.qr_string || '',
-                    checkout_url: result.data.payment_url
+                    qr_string: result.data.qr_string,
+                    checkout_url: result.data.checkout_url
                 })
                 showToast('QRIS berhasil dibuat!', 'success')
             } else {
-                showToast(result.message || 'Gagal membuat QRIS', 'error')
+                showToast(result.error || 'Gagal membuat QRIS', 'error')
             }
         } catch (error) {
             console.error('Error generating QRIS:', error)
