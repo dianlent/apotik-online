@@ -2,7 +2,7 @@
 // Documentation: https://docs.duitku.com/
 // NOTE: This module should ONLY be used server-side (API routes, server components)
 
-import crypto from 'crypto'
+import crypto from 'node:crypto'
 
 interface DuitkuConfig {
     merchantCode: string
