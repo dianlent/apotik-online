@@ -250,8 +250,8 @@ export default function OrderPage() {
                 throw new Error(error.error || error.message || 'Gagal membuat pembayaran')
             }
 
-            const data = await response.json()
-            console.log('QRIS Response:', data)
+            const responseData = await response.json()
+            console.log('QRIS Response:', responseData)
 
             // Store order info in localStorage
             localStorage.setItem('lastOrderId', orderId)
@@ -259,13 +259,16 @@ export default function OrderPage() {
             localStorage.setItem('lastOrderAmount', total.toString())
 
             // Check response structure
-            if (!data) {
+            if (!responseData) {
                 throw new Error('Response kosong dari server')
             }
 
-            // Show QRIS - check both possible response formats
-            const qrString = data.qrString || data.qr_string || data.qrcode
-            const reference = data.reference || data.merchantOrderId || orderId
+            // Handle nested data structure (e.g., {success: true, data: {...}})
+            const data = responseData.data || responseData
+
+            // Show QRIS - check multiple possible response formats
+            const qrString = data.qrString || data.qr_string || data.qrcode || responseData.qrString
+            const reference = data.reference || data.merchantOrderId || responseData.reference || orderId
 
             if (qrString) {
                 // Redirect to payment page with QRIS
@@ -274,8 +277,8 @@ export default function OrderPage() {
                 localStorage.setItem('qrisReference', reference)
                 router.push(`/payment/qris?reference=${reference}`)
             } else {
-                console.error('QRIS data not found in response:', data)
-                throw new Error(`QRIS tidak tersedia. Silakan periksa konfigurasi Duitku di Settings. Error: ${data.message || 'Unknown error'}`)
+                console.error('QRIS data not found in response:', responseData)
+                throw new Error(`QRIS tidak tersedia. Silakan periksa konfigurasi Duitku di Settings. Error: ${data.message || responseData.message || 'Unknown error'}`)
             }
 
         } catch (error: any) {
