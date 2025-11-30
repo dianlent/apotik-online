@@ -36,6 +36,7 @@ export default function AdminProductsPage() {
     const [barcodeExists, setBarcodeExists] = useState(false)
     const [checkingBarcode, setCheckingBarcode] = useState(false)
     const [barcodeError, setBarcodeError] = useState('')
+    const [barcodeType, setBarcodeType] = useState<'EAN13' | 'UPC'>('EAN13')
     const barcodeCanvasRef = useRef<HTMLCanvasElement>(null)
     const supabase = createClient()
     const { showToast } = useToast()
@@ -47,13 +48,13 @@ export default function AdminProductsPage() {
 
     // Generate barcode image when barcode changes and is valid
     useEffect(() => {
-        if (formData.barcode && validateEAN13(formData.barcode) && !barcodeError && !barcodeExists) {
+        if (formData.barcode && validateBarcode(formData.barcode, barcodeType) && !barcodeError && !barcodeExists) {
             // Small delay to ensure canvas is rendered
             setTimeout(() => {
-                generateBarcodeImage(formData.barcode)
+                generateBarcodeImage(formData.barcode, barcodeType)
             }, 100)
         }
-    }, [formData.barcode, barcodeError, barcodeExists])
+    }, [formData.barcode, barcodeError, barcodeExists, barcodeType])
 
     async function loadProducts() {
         setLoading(true)
@@ -129,9 +130,20 @@ export default function AdminProductsPage() {
         setBarcodeError('')
     }
 
+    // Validate barcode based on type
+    const validateBarcode = (barcode: string, type: 'EAN13' | 'UPC'): boolean => {
+        if (!barcode) return true // Empty is valid (optional field)
+        
+        if (type === 'EAN13') {
+            return validateEAN13(barcode)
+        } else {
+            return validateUPC(barcode)
+        }
+    }
+
     // Validate EAN13 barcode
     const validateEAN13 = (barcode: string): boolean => {
-        if (!barcode) return true // Empty is valid (optional field)
+        if (!barcode) return true
         
         // EAN13 must be exactly 13 digits
         if (!/^\d{13}$/.test(barcode)) {
@@ -145,6 +157,28 @@ export default function AdminProductsPage() {
         let sum = 0
         for (let i = 0; i < 12; i++) {
             sum += digits[i] * (i % 2 === 0 ? 1 : 3)
+        }
+        
+        const calculatedCheck = (10 - (sum % 10)) % 10
+        return checkDigit === calculatedCheck
+    }
+
+    // Validate UPC barcode
+    const validateUPC = (barcode: string): boolean => {
+        if (!barcode) return true
+        
+        // UPC must be exactly 12 digits
+        if (!/^\d{12}$/.test(barcode)) {
+            return false
+        }
+
+        // Calculate checksum
+        const digits = barcode.split('').map(Number)
+        const checkDigit = digits[11]
+        
+        let sum = 0
+        for (let i = 0; i < 11; i++) {
+            sum += digits[i] * (i % 2 === 0 ? 3 : 1)
         }
         
         const calculatedCheck = (10 - (sum % 10)) % 10
@@ -172,13 +206,32 @@ export default function AdminProductsPage() {
         return barcode + checkDigit
     }
 
+    // Generate random UPC barcode
+    const generateUPC = (): string => {
+        // Generate 11 random digits
+        let barcode = ''
+        for (let i = 0; i < 11; i++) {
+            barcode += Math.floor(Math.random() * 10)
+        }
+        
+        // Calculate check digit
+        const digits = barcode.split('').map(Number)
+        let sum = 0
+        for (let i = 0; i < 11; i++) {
+            sum += digits[i] * (i % 2 === 0 ? 3 : 1)
+        }
+        const checkDigit = (10 - (sum % 10)) % 10
+        
+        return barcode + checkDigit
+    }
+
     // Generate barcode image
-    const generateBarcodeImage = (barcode: string) => {
+    const generateBarcodeImage = (barcode: string, type: 'EAN13' | 'UPC' = 'EAN13') => {
         if (!barcode || !barcodeCanvasRef.current) return
         
         try {
             JsBarcode(barcodeCanvasRef.current, barcode, {
-                format: 'EAN13',
+                format: type === 'EAN13' ? 'EAN13' : 'UPC',
                 width: 2,
                 height: 80,
                 displayValue: true,
@@ -208,15 +261,18 @@ export default function AdminProductsPage() {
             return
         }
 
-        // Validate EAN13 format
-        if (!validateEAN13(barcode)) {
-            setBarcodeError('Barcode harus format EAN13 (13 digit dengan checksum valid)')
+        // Validate barcode format based on type
+        const isValid = validateBarcode(barcode, barcodeType)
+        const expectedLength = barcodeType === 'EAN13' ? 13 : 12
+        
+        if (!isValid) {
+            setBarcodeError(`Barcode harus format ${barcodeType} (${expectedLength} digit dengan checksum valid)`)
             setBarcodeExists(false)
             return
         } else {
             setBarcodeError('')
             // Generate barcode image if valid
-            generateBarcodeImage(barcode)
+            generateBarcodeImage(barcode, barcodeType)
         }
 
         setCheckingBarcode(true)
@@ -283,9 +339,10 @@ export default function AdminProductsPage() {
         try {
             // Validate barcode format and uniqueness if provided
             if (formData.barcode) {
-                // Validate EAN13 format
-                if (!validateEAN13(formData.barcode)) {
-                    showToast('Barcode harus format EAN13 yang valid (13 digit)', 'error')
+                // Validate barcode format based on type
+                if (!validateBarcode(formData.barcode, barcodeType)) {
+                    const expectedLength = barcodeType === 'EAN13' ? 13 : 12
+                    showToast(`Barcode harus format ${barcodeType} yang valid (${expectedLength} digit)`, 'error')
                     return
                 }
 
@@ -624,25 +681,69 @@ export default function AdminProductsPage() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Barcode EAN13
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Barcode
                                     </label>
+                                    
+                                    {/* Barcode Type Selection */}
+                                    <div className="mb-3">
+                                        <label className="block text-xs font-medium text-gray-600 mb-2">
+                                            Pilih Jenis Barcode
+                                        </label>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setBarcodeType('EAN13')
+                                                    setFormData({ ...formData, barcode: '' })
+                                                    setBarcodeError('')
+                                                    setBarcodeExists(false)
+                                                }}
+                                                className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                                                    barcodeType === 'EAN13'
+                                                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md'
+                                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                                }`}
+                                            >
+                                                EAN13 (13 digit)
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setBarcodeType('UPC')
+                                                    setFormData({ ...formData, barcode: '' })
+                                                    setBarcodeError('')
+                                                    setBarcodeExists(false)
+                                                }}
+                                                className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                                                    barcodeType === 'UPC'
+                                                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md'
+                                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                                }`}
+                                            >
+                                                UPC (12 digit)
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Barcode Input */}
                                     <div className="flex gap-2">
                                         <div className="flex-1 relative">
                                             <input
                                                 type="text"
                                                 value={formData.barcode}
                                                 onChange={(e) => {
-                                                    const value = e.target.value.replace(/\D/g, '').slice(0, 13)
+                                                    const maxLength = barcodeType === 'EAN13' ? 13 : 12
+                                                    const value = e.target.value.replace(/\D/g, '').slice(0, maxLength)
                                                     setFormData({ ...formData, barcode: value })
                                                     checkBarcodeExists(value)
                                                 }}
-                                                placeholder="8992761123456"
-                                                maxLength={13}
+                                                placeholder={barcodeType === 'EAN13' ? '8992761123456' : '012345678912'}
+                                                maxLength={barcodeType === 'EAN13' ? 13 : 12}
                                                 className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:border-transparent font-mono text-lg tracking-wider ${
                                                     barcodeError || barcodeExists
                                                         ? 'border-red-300 focus:ring-red-500' 
-                                                        : formData.barcode && validateEAN13(formData.barcode)
+                                                        : formData.barcode && validateBarcode(formData.barcode, barcodeType)
                                                         ? 'border-green-300 focus:ring-green-500'
                                                         : 'border-gray-300 focus:ring-blue-500'
                                                 }`}
@@ -656,7 +757,7 @@ export default function AdminProductsPage() {
                                         <button
                                             type="button"
                                             onClick={() => {
-                                                const newBarcode = generateEAN13()
+                                                const newBarcode = barcodeType === 'EAN13' ? generateEAN13() : generateUPC()
                                                 setFormData({ ...formData, barcode: newBarcode })
                                                 checkBarcodeExists(newBarcode)
                                             }}
@@ -667,44 +768,49 @@ export default function AdminProductsPage() {
                                     </div>
                                     
                                     {/* Barcode Preview */}
-                                    {formData.barcode && validateEAN13(formData.barcode) && !barcodeError && !barcodeExists && (
+                                    {formData.barcode && validateBarcode(formData.barcode, barcodeType) && !barcodeError && !barcodeExists && (
                                         <div className="mt-3 p-4 bg-gradient-to-br from-green-50 to-blue-50 border-2 border-green-300 rounded-lg">
                                             <div className="flex flex-col items-center gap-3">
                                                 <div className="bg-white p-3 rounded-lg shadow-sm">
                                                     <canvas ref={barcodeCanvasRef}></canvas>
                                                 </div>
-                                                <button
-                                                    type="button"
-                                                    onClick={downloadBarcode}
-                                                    className="px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg hover:from-blue-700 hover:to-cyan-700 transition-all text-sm font-medium flex items-center gap-2"
-                                                >
-                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                                    </svg>
-                                                    Download Barcode
-                                                </button>
+                                                <div className="flex gap-2">
+                                                    <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">
+                                                        {barcodeType}
+                                                    </span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={downloadBarcode}
+                                                        className="px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg hover:from-blue-700 hover:to-cyan-700 transition-all text-sm font-medium flex items-center gap-2"
+                                                    >
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                                        </svg>
+                                                        Download
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     )}
                                     
                                     {barcodeError ? (
-                                        <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                                        <p className="text-xs text-red-600 mt-2 flex items-center gap-1">
                                             <span>⚠️</span>
                                             {barcodeError}
                                         </p>
                                     ) : barcodeExists ? (
-                                        <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                                        <p className="text-xs text-red-600 mt-2 flex items-center gap-1">
                                             <span>⚠️</span>
                                             Barcode sudah digunakan oleh produk lain
                                         </p>
-                                    ) : formData.barcode && validateEAN13(formData.barcode) ? (
-                                        <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                                    ) : formData.barcode && validateBarcode(formData.barcode, barcodeType) ? (
+                                        <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
                                             <span>✓</span>
-                                            Barcode EAN13 valid
+                                            Barcode {barcodeType} valid
                                         </p>
                                     ) : (
-                                        <p className="text-xs text-gray-500 mt-1">
-                                            Format EAN13 (13 digit) - Opsional, klik Generate untuk otomatis
+                                        <p className="text-xs text-gray-500 mt-2">
+                                            Format {barcodeType} ({barcodeType === 'EAN13' ? '13' : '12'} digit) - Opsional, klik Generate untuk otomatis
                                         </p>
                                     )}
                                 </div>
