@@ -49,6 +49,12 @@ function QRISPaymentContent() {
         setChecking(true)
         try {
             const response = await fetch(`/api/payment/status?reference=${ref}`)
+            
+            if (!response.ok) {
+                console.warn('Payment status check failed:', response.status)
+                return
+            }
+
             const data = await response.json()
 
             if (data.status === 'SUCCESS' || data.statusCode === '00') {
@@ -56,9 +62,15 @@ function QRISPaymentContent() {
                 localStorage.removeItem('qrisImage')
                 localStorage.removeItem('qrisReference')
                 router.push('/payment/success')
+            } else if (data.status === 'FAILED') {
+                // Payment failed
+                console.warn('Payment failed for reference:', ref)
+            } else if (data.status === 'EXPIRED') {
+                // Payment expired
+                console.warn('Payment expired for reference:', ref)
             }
         } catch (error) {
-            console.error('Error checking payment status:', error)
+            console.error('Error checking payment status:', error instanceof Error ? error.message : 'Unknown error')
         } finally {
             setChecking(false)
         }

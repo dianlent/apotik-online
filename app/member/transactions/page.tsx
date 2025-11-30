@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { Package, Calendar, CreditCard, Eye, ArrowLeft, Clock, CheckCircle, XCircle } from 'lucide-react'
+import { Package, Calendar, CreditCard, Eye, ArrowLeft, Clock, CheckCircle, XCircle, Truck, MapPin, Box, FileText } from 'lucide-react'
 import { useToast } from '@/context/ToastContext'
 import AuthGuard from '@/components/AuthGuard'
 import MemberLayout from '@/components/member/MemberLayout'
@@ -116,17 +116,67 @@ function MemberTransactionsContent() {
 
     function getOrderStatusBadge(status: string) {
         const badges = {
-            pending: { color: 'bg-yellow-100 text-yellow-800', text: 'Pending' },
-            processing: { color: 'bg-blue-100 text-blue-800', text: 'Diproses' },
-            shipped: { color: 'bg-purple-100 text-purple-800', text: 'Dikirim' },
-            delivered: { color: 'bg-green-100 text-green-800', text: 'Selesai' },
-            cancelled: { color: 'bg-red-100 text-red-800', text: 'Dibatalkan' }
+            pending: { color: 'bg-yellow-100 text-yellow-800', icon: Clock, text: 'Menunggu Konfirmasi' },
+            processing: { color: 'bg-blue-100 text-blue-800', icon: Box, text: 'Sedang Diproses' },
+            shipped: { color: 'bg-purple-100 text-purple-800', icon: Truck, text: 'Dalam Pengiriman' },
+            delivered: { color: 'bg-green-100 text-green-800', icon: CheckCircle, text: 'Terkirim' },
+            cancelled: { color: 'bg-red-100 text-red-800', icon: XCircle, text: 'Dibatalkan' }
         }
         const badge = badges[status as keyof typeof badges] || badges.pending
+        const Icon = badge.icon
         return (
-            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${badge.color}`}>
+            <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${badge.color}`}>
+                <Icon className="h-3 w-3" />
                 {badge.text}
             </span>
+        )
+    }
+
+    function getShippingProgress(status: string) {
+        const steps = [
+            { key: 'pending', label: 'Pesanan Diterima', icon: FileText },
+            { key: 'processing', label: 'Sedang Dikemas', icon: Box },
+            { key: 'shipped', label: 'Dalam Pengiriman', icon: Truck },
+            { key: 'delivered', label: 'Terkirim', icon: MapPin }
+        ]
+
+        const statusOrder = ['pending', 'processing', 'shipped', 'delivered']
+        const currentIndex = statusOrder.indexOf(status)
+
+        return (
+            <div className="py-4">
+                <div className="flex items-center justify-between">
+                    {steps.map((step, index) => {
+                        const Icon = step.icon
+                        const isActive = index <= currentIndex
+                        const isCurrent = index === currentIndex
+                        
+                        return (
+                            <div key={step.key} className="flex-1 relative">
+                                <div className="flex flex-col items-center">
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                                        isActive 
+                                            ? 'bg-blue-600 text-white' 
+                                            : 'bg-gray-200 text-gray-400'
+                                    } ${isCurrent ? 'ring-4 ring-blue-200' : ''} transition-all`}>
+                                        <Icon className="h-5 w-5" />
+                                    </div>
+                                    <p className={`text-xs mt-2 text-center ${
+                                        isActive ? 'text-gray-900 font-medium' : 'text-gray-500'
+                                    }`}>
+                                        {step.label}
+                                    </p>
+                                </div>
+                                {index < steps.length - 1 && (
+                                    <div className={`absolute top-5 left-1/2 w-full h-0.5 ${
+                                        index < currentIndex ? 'bg-blue-600' : 'bg-gray-200'
+                                    }`} style={{ transform: 'translateY(-50%)' }} />
+                                )}
+                            </div>
+                        )
+                    })}
+                </div>
+            </div>
         )
     }
 
@@ -210,16 +260,24 @@ function MemberTransactionsContent() {
                                         </button>
                                     </div>
 
-                                    <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                                        <div className="flex items-center gap-4">
-                                            {getPaymentStatusBadge(order.payment_status)}
-                                            {getOrderStatusBadge(order.order_status)}
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="text-sm text-gray-600 mb-1">Total</p>
-                                            <p className="text-xl font-bold text-gray-900">
-                                                Rp {order.total_amount.toLocaleString()}
-                                            </p>
+                                    <div className="space-y-3 pt-4 border-t border-gray-200">
+                                        <div className="flex items-center justify-between">
+                                            <div className="space-y-2">
+                                                <div>
+                                                    <p className="text-xs text-gray-500 mb-1">Pembayaran</p>
+                                                    {getPaymentStatusBadge(order.payment_status)}
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs text-gray-500 mb-1">Pengiriman</p>
+                                                    {getOrderStatusBadge(order.order_status)}
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-sm text-gray-600 mb-1">Total Pembayaran</p>
+                                                <p className="text-2xl font-bold text-blue-600">
+                                                    Rp {order.total_amount.toLocaleString()}
+                                                </p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -263,17 +321,28 @@ function MemberTransactionsContent() {
                             <div className="p-6">
                                 {/* Status */}
                                 <div className="mb-6 pb-6 border-b border-gray-200">
-                                    <div className="flex items-center gap-4 mb-3">
+                                    <div className="grid grid-cols-2 gap-4 mb-4">
                                         <div>
                                             <p className="text-sm text-gray-600 mb-2">Status Pembayaran</p>
                                             {getPaymentStatusBadge(selectedOrder.payment_status)}
                                         </div>
                                         <div>
-                                            <p className="text-sm text-gray-600 mb-2">Status Pesanan</p>
+                                            <p className="text-sm text-gray-600 mb-2">Status Pengiriman</p>
                                             {getOrderStatusBadge(selectedOrder.order_status)}
                                         </div>
                                     </div>
                                 </div>
+
+                                {/* Shipping Progress */}
+                                {selectedOrder.order_status !== 'cancelled' && (
+                                    <div className="mb-6 pb-6 border-b border-gray-200">
+                                        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                                            <Truck className="h-5 w-5 text-blue-600" />
+                                            Tracking Pengiriman
+                                        </h3>
+                                        {getShippingProgress(selectedOrder.order_status)}
+                                    </div>
+                                )}
 
                                 {/* Order Items */}
                                 <div className="mb-6">

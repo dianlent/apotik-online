@@ -25,7 +25,7 @@ export default function QRISPopup({
 }: QRISPopupProps) {
     const [checking, setChecking] = useState(false)
     const [countdown, setCountdown] = useState(300) // 5 minutes
-    const [paymentStatus, setPaymentStatus] = useState<'pending' | 'success' | 'failed'>('pending')
+    const [paymentStatus, setPaymentStatus] = useState<'pending' | 'success' | 'failed' | 'expired'>('pending')
 
     useEffect(() => {
         if (!isOpen) return
@@ -58,6 +58,12 @@ export default function QRISPopup({
         setChecking(true)
         try {
             const response = await fetch(`/api/payment/status?reference=${reference}`)
+            
+            if (!response.ok) {
+                console.warn('Payment status check failed:', response.status)
+                return
+            }
+
             const data = await response.json()
 
             if (data.status === 'SUCCESS' || data.statusCode === '00') {
@@ -65,9 +71,13 @@ export default function QRISPopup({
                 setTimeout(() => {
                     onPaymentSuccess()
                 }, 2000)
+            } else if (data.status === 'FAILED') {
+                setPaymentStatus('failed')
+            } else if (data.status === 'EXPIRED') {
+                setPaymentStatus('expired')
             }
         } catch (error) {
-            console.error('Error checking payment status:', error)
+            console.error('Error checking payment status:', error instanceof Error ? error.message : 'Unknown error')
         } finally {
             setChecking(false)
         }

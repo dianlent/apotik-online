@@ -38,13 +38,15 @@ export default function LoginForm() {
                 .eq('id', (await supabase.auth.getUser()).data.user?.id)
                 .single()
 
-            showToast('Login successful! Welcome back.')
+            showToast('Login berhasil! Selamat datang kembali.', 'success')
             
             // Redirect based on role
             if (profile?.role === 'admin') {
                 router.push('/admin')
             } else if (profile?.role === 'kasir') {
                 router.push('/kasir')
+            } else if (profile?.role === 'customer') {
+                router.push('/member')
             } else {
                 router.push('/')
             }
