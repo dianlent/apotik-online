@@ -10,7 +10,7 @@ interface RoleRequest {
     id: string
     user_id: string
     requested_role: string
-    current_role: string
+    previous_role: string
     status: string
     notes: string | null
     created_at: string
@@ -188,7 +188,7 @@ export default function RoleRequestsPage() {
                                                                 </div>
                                                                 <div className="flex items-center gap-3 mt-3">
                                                                     <span className="text-sm text-gray-600">Role saat ini:</span>
-                                                                    {getRoleBadge(request.current_role)}
+                                                                    {getRoleBadge(request.previous_role)}
                                                                     <span className="text-gray-400">→</span>
                                                                     <span className="text-sm text-gray-600">Diminta:</span>
                                                                     {getRoleBadge(request.requested_role)}
@@ -287,7 +287,7 @@ export default function RoleRequestsPage() {
                                                             </td>
                                                             <td className="px-6 py-4 whitespace-nowrap">
                                                                 <div className="flex items-center gap-2">
-                                                                    {getRoleBadge(request.current_role)}
+                                                                    {getRoleBadge(request.previous_role)}
                                                                     <span className="text-gray-400">→</span>
                                                                     {getRoleBadge(request.requested_role)}
                                                                 </div>

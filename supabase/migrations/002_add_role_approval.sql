@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS role_requests (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id uuid REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
     requested_role text NOT NULL,
-    current_role text NOT NULL,
+    previous_role text NOT NULL,
     status text DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
     notes text,
     approved_by uuid REFERENCES profiles(id),

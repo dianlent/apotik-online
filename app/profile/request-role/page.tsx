@@ -72,7 +72,7 @@ export default function RequestRolePage() {
                 .insert({
                     user_id: user.id,
                     requested_role: selectedRole,
-                    current_role: currentRole,
+                    previous_role: currentRole,
                     status: 'pending',
                     notes: notes || null
                 })
