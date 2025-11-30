@@ -15,7 +15,37 @@ export default function Checkout() {
         try {
             // Create order ID
             const orderId = `ORDER-${Date.now()}`
+            const orderNumber = `#${Date.now().toString().slice(-8)}`
             const finalTotal = total + shippingCost
+
+            // Prepare order data for webhook
+            const orderData = {
+                orderId,
+                orderNumber,
+                items: items.map(item => ({
+                    id: item.id,
+                    name: item.name,
+                    quantity: item.quantity,
+                    price: item.price
+                })),
+                subtotal: total,
+                shippingCost,
+                total: finalTotal,
+                customerName: 'Customer',
+                customerEmail: 'customer@example.com',
+                paymentMethod: 'qris',
+                paymentStatus: 'pending',
+                status: 'pending'
+            }
+
+            // Send order to N8N webhook (non-blocking)
+            fetch('/api/orders/webhook', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(orderData)
+            }).catch(err => console.error('Webhook notification failed:', err))
 
             // Call Duitku QRIS payment API
             const response = await fetch('/api/payment/qris', {
@@ -26,9 +56,9 @@ export default function Checkout() {
                 body: JSON.stringify({
                     orderId,
                     amount: finalTotal,
-                    customerName: 'Customer', // You can add user info from auth context
-                    customerEmail: 'customer@example.com', // You can add user info from auth context
-                    productDetails: `Order ${orderId}`
+                    customerName: 'Customer',
+                    customerEmail: 'customer@example.com',
+                    productDetails: `Order ${orderNumber}`
                 })
             })
 
