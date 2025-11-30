@@ -7,6 +7,7 @@ import { ShoppingCart, Plus, Minus, Trash2, Package, CreditCard, Search, Filter 
 import { useToast } from '@/context/ToastContext'
 import Image from 'next/image'
 import QRCode from 'qrcode'
+import QRISPopup from '@/components/QRISPopup'
 
 interface Product {
     id: string
@@ -33,6 +34,13 @@ export default function OrderPage() {
     const [userRole, setUserRole] = useState<string>('')
     const [userName, setUserName] = useState<string>('')
     const [userEmail, setUserEmail] = useState<string>('')
+    const [showQRISPopup, setShowQRISPopup] = useState(false)
+    const [qrisData, setQrisData] = useState({
+        qrisImage: '',
+        reference: '',
+        orderId: '',
+        amount: 0
+    })
     const supabase = createClient()
     const router = useRouter()
     const { showToast } = useToast()
@@ -283,13 +291,14 @@ export default function OrderPage() {
                         }
                     })
                     
-                    // Store QR code image and reference
-                    localStorage.setItem('qrisImage', qrCodeDataUrl)
-                    localStorage.setItem('qrisReference', reference)
-                    localStorage.setItem('qrisString', qrString)
-                    
-                    // Redirect to payment page
-                    router.push(`/payment/qris?reference=${reference}`)
+                    // Show QRIS popup instead of redirecting
+                    setQrisData({
+                        qrisImage: qrCodeDataUrl,
+                        reference: reference,
+                        orderId: orderId,
+                        amount: total
+                    })
+                    setShowQRISPopup(true)
                 } catch (qrError) {
                     console.error('Error generating QR code:', qrError)
                     throw new Error('Gagal membuat QR code. Silakan coba lagi.')
@@ -305,6 +314,15 @@ export default function OrderPage() {
         } finally {
             setSubmitting(false)
         }
+    }
+
+    function handlePaymentSuccess() {
+        // Clear cart
+        setCart([])
+        setShowQRISPopup(false)
+        // Redirect to member transactions page
+        showToast('Pembayaran berhasil!', 'success')
+        router.push('/member/transactions')
     }
 
     if (loading) {
@@ -515,6 +533,17 @@ export default function OrderPage() {
                     </div>
                 </div>
             </div>
+
+            {/* QRIS Popup */}
+            <QRISPopup
+                isOpen={showQRISPopup}
+                onClose={() => setShowQRISPopup(false)}
+                qrisImage={qrisData.qrisImage}
+                reference={qrisData.reference}
+                orderId={qrisData.orderId}
+                amount={qrisData.amount}
+                onPaymentSuccess={handlePaymentSuccess}
+            />
         </div>
     )
 }
