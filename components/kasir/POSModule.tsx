@@ -178,11 +178,19 @@ export default function POSModule() {
         setLoadingQris(true)
         try {
             // Generate order ID
-            const orderId = `ORD-${Date.now()}`
+            const orderId = `POS-${Date.now()}`
 
             // Get user email
             const { data: { user } } = await supabase.auth.getUser()
-            const userEmail = user?.email || 'customer@example.com'
+            const userEmail = user?.email || 'kasir@apotik.com'
+
+            console.log('Generating QRIS with data:', {
+                orderId,
+                amount: Math.round(calculateTotal()),
+                customerName: userName || 'Customer',
+                customerEmail: userEmail,
+                productDetails: `Pembelian ${cart.length} item`
+            })
 
             // Call server-side API to create QRIS
             const response = await fetch('/api/payment/qris', {
@@ -199,20 +207,32 @@ export default function POSModule() {
                 })
             })
 
+            console.log('QRIS API Response status:', response.status)
+            
+            if (!response.ok) {
+                const errorText = await response.text()
+                console.error('QRIS API Error:', errorText)
+                throw new Error(`HTTP ${response.status}: ${errorText}`)
+            }
+
             const result = await response.json()
+            console.log('QRIS API Result:', result)
 
             if (result.success && result.data) {
                 setQrisData({
-                    qr_string: result.data.qr_string,
-                    checkout_url: result.data.checkout_url
+                    qr_string: result.data.qr_string || '',
+                    checkout_url: result.data.checkout_url || ''
                 })
                 showToast('QRIS berhasil dibuat!', 'success')
             } else {
-                showToast(result.error || 'Gagal membuat QRIS', 'error')
+                const errorMsg = result.error || result.message || 'Gagal membuat QRIS'
+                console.error('QRIS generation failed:', errorMsg)
+                showToast(errorMsg, 'error')
             }
         } catch (error) {
             console.error('Error generating QRIS:', error)
-            showToast('Gagal membuat QRIS', 'error')
+            const errorMsg = error instanceof Error ? error.message : 'Gagal membuat QRIS. Periksa konfigurasi Duitku di Settings.'
+            showToast(errorMsg, 'error')
         } finally {
             setLoadingQris(false)
         }
@@ -704,57 +724,90 @@ export default function POSModule() {
                         {/* QRIS Payment */}
                         {paymentMethod === 'qris' && (
                             <div className="mb-4">
-                                <div className="bg-white border-2 border-gray-300 rounded-lg p-6 text-center">
-                                    <p className="text-sm text-gray-600 mb-4">Scan QRIS untuk membayar</p>
+                                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg p-6">
+                                    <div className="text-center mb-4">
+                                        <p className="text-lg font-semibold text-gray-900 mb-1">Pembayaran QRIS</p>
+                                        <p className="text-sm text-gray-600">Scan dengan aplikasi e-wallet atau mobile banking</p>
+                                    </div>
                                     
                                     {loadingQris ? (
-                                        <div className="w-48 h-48 mx-auto bg-gray-100 rounded-lg flex items-center justify-center">
+                                        <div className="w-56 h-56 mx-auto bg-white rounded-lg flex items-center justify-center shadow-md">
                                             <div className="text-center">
-                                                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                                                <p className="text-sm text-gray-600">Membuat QRIS...</p>
+                                                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-3"></div>
+                                                <p className="text-sm text-gray-600 font-medium">Membuat QRIS...</p>
+                                                <p className="text-xs text-gray-500 mt-1">Mohon tunggu sebentar</p>
                                             </div>
                                         </div>
                                     ) : qrisData && qrisData.qr_string ? (
-                                        <div className="bg-white p-4 inline-block rounded-lg border border-gray-200">
-                                            <img
-                                                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrisData.qr_string)}`}
-                                                alt="QRIS Code"
-                                                className="w-48 h-48 mx-auto"
-                                            />
+                                        <div className="space-y-4">
+                                            <div className="bg-white p-4 inline-block rounded-lg border-2 border-green-300 shadow-lg mx-auto">
+                                                <img
+                                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrisData.qr_string)}`}
+                                                    alt="QRIS Code"
+                                                    className="w-48 h-48 mx-auto"
+                                                    onError={(e) => {
+                                                        console.error('QR Code image failed to load')
+                                                        e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" fill="%23f3f4f6"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="%236b7280">QR Error</text></svg>'
+                                                    }}
+                                                />
+                                            </div>
+                                            <div className="bg-green-50 p-3 rounded-lg border border-green-200">
+                                                <p className="text-sm text-green-700 font-medium text-center">
+                                                    ✓ QRIS berhasil dibuat!
+                                                </p>
+                                            </div>
+                                            {qrisData.checkout_url && (
+                                                <div className="text-center">
+                                                    <a
+                                                        href={qrisData.checkout_url}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                                                    >
+                                                        <span>🔗</span>
+                                                        Buka Halaman Pembayaran
+                                                    </a>
+                                                </div>
+                                            )}
                                         </div>
                                     ) : (
-                                        <div className="w-48 h-48 mx-auto bg-gray-100 rounded-lg flex items-center justify-center">
-                                            <div className="text-center">
-                                                <div className="text-6xl mb-2">📱</div>
-                                                <p className="text-sm text-gray-600">QRIS Code</p>
+                                        <div className="w-56 h-56 mx-auto bg-white rounded-lg flex items-center justify-center shadow-md border-2 border-dashed border-gray-300">
+                                            <div className="text-center p-4">
+                                                <div className="text-6xl mb-3">📱</div>
+                                                <p className="text-sm text-gray-600 mb-3">Belum ada QRIS</p>
                                                 <button
                                                     onClick={generateQRIS}
-                                                    className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-xs hover:bg-blue-700"
+                                                    disabled={loadingQris}
+                                                    className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md font-medium disabled:opacity-50"
                                                 >
                                                     Generate QRIS
                                                 </button>
+                                                <p className="text-xs text-gray-500 mt-3">
+                                                    Klik untuk membuat kode QRIS
+                                                </p>
                                             </div>
                                         </div>
                                     )}
                                     
-                                    <p className="text-xs text-gray-500 mt-4">Total: Rp {calculateTotal().toLocaleString()}</p>
-                                    <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                                        <p className="text-sm text-blue-700">
-                                            ✓ Scan dengan aplikasi e-wallet atau mobile banking
-                                        </p>
+                                    <div className="mt-4 bg-white p-4 rounded-lg border border-gray-200">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-sm text-gray-600">Total Pembayaran:</span>
+                                            <span className="text-xl font-bold text-blue-600">
+                                                Rp {calculateTotal().toLocaleString()}
+                                            </span>
+                                        </div>
                                     </div>
                                     
                                     {qrisData && (
-                                        <div className="mt-4">
-                                            <a
-                                                href={qrisData.checkout_url}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="text-sm text-blue-600 hover:text-blue-800 underline"
-                                            >
-                                                Atau buka halaman pembayaran →
-                                            </a>
-                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                setQrisData(null)
+                                                generateQRIS()
+                                            }}
+                                            className="mt-3 w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
+                                        >
+                                            🔄 Generate Ulang QRIS
+                                        </button>
                                     )}
                                 </div>
                             </div>
