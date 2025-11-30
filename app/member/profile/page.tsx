@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { User, MapPin, Phone, Mail, Home, Save, ArrowLeft } from 'lucide-react'
 import { useToast } from '@/context/ToastContext'
 import Link from 'next/link'
+import MemberLayout from '@/components/member/MemberLayout'
 
 interface ProfileData {
     full_name: string
@@ -163,6 +164,7 @@ export default function MemberProfilePage() {
     }
 
     return (
+        <MemberLayout>
         <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 py-8">
             <div className="container-responsive max-w-4xl">
                 {/* Back Button */}
@@ -422,5 +424,6 @@ export default function MemberProfilePage() {
                 </div>
             </div>
         </div>
+        </MemberLayout>
     )
 }

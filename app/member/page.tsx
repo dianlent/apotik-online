@@ -1,130 +1,25 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ShoppingCart, Package, User, LogOut } from 'lucide-react'
-import { useToast } from '@/context/ToastContext'
+import { ShoppingCart, Package, User } from 'lucide-react'
+import MemberLayout from '@/components/member/MemberLayout'
 
 export default function MemberDashboard() {
-    const [loading, setLoading] = useState(true)
-    const [userName, setUserName] = useState<string>('')
-    const [userEmail, setUserEmail] = useState<string>('')
-    const supabase = createClient()
     const router = useRouter()
-    const { showToast } = useToast()
-
-    useEffect(() => {
-        checkAuth()
-    }, [])
-
-    async function checkAuth() {
-        try {
-            const { data: { user } } = await supabase.auth.getUser()
-            
-            if (!user) {
-                showToast('Silakan login terlebih dahulu', 'error')
-                router.push('/login')
-                return
-            }
-
-            // Get user profile
-            const { data: profile } = await supabase
-                .from('profiles')
-                .select('role, full_name')
-                .eq('id', user.id)
-                .single()
-
-            if (!profile) {
-                showToast('Profile tidak ditemukan', 'error')
-                router.push('/login')
-                return
-            }
-
-            // Check if user is customer/member
-            if (profile.role !== 'customer') {
-                showToast('Halaman ini khusus untuk member', 'error')
-                router.push('/')
-                return
-            }
-
-            setUserName(profile.full_name || '')
-            setUserEmail(user.email || '')
-        } catch (error) {
-            console.error('Error checking auth:', error)
-            router.push('/login')
-        } finally {
-            setLoading(false)
-        }
-    }
-
-    async function handleLogout() {
-        try {
-            await supabase.auth.signOut()
-            showToast('Berhasil logout', 'success')
-            router.push('/')
-        } catch (error) {
-            console.error('Logout error:', error)
-            showToast('Gagal logout', 'error')
-        }
-    }
-
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                    <p className="text-gray-600">Memuat dashboard...</p>
-                </div>
-            </div>
-        )
-    }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
-            {/* Header */}
-            <div className="bg-white border-b border-gray-200 shadow-sm">
-                <div className="container-responsive py-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg">
-                                <User className="h-6 w-6 text-white" />
-                            </div>
-                            <div>
-                                <h1 className="text-xl font-bold text-gray-900">Dashboard Member</h1>
-                                <p className="text-sm text-gray-600">{userName}</p>
-                            </div>
-                        </div>
-                        <button
-                            onClick={handleLogout}
-                            className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        >
-                            <LogOut className="h-5 w-5" />
-                            <span className="hidden sm:inline">Logout</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            {/* Main Content */}
-            <div className="container-responsive py-8">
+        <MemberLayout>
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+                <div className="container-responsive py-8">
                 {/* Welcome Card */}
                 <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl shadow-lg p-8 mb-8 text-white">
                     <h2 className="text-2xl sm:text-3xl font-bold mb-2">
-                        Selamat Datang, {userName}! 👋
+                        Selamat Datang! 👋
                     </h2>
                     <p className="text-blue-100 mb-4">
                         Kelola pemesanan obat dan produk kesehatan Anda dengan mudah
                     </p>
-                    <div className="flex items-center gap-2 text-sm">
-                        <div className="px-3 py-1 bg-white/20 rounded-full">
-                            ✉️ {userEmail}
-                        </div>
-                        <div className="px-3 py-1 bg-white/20 rounded-full">
-                            👤 Member
-                        </div>
-                    </div>
                 </div>
 
                 {/* Menu Cards */}
@@ -276,5 +171,6 @@ export default function MemberDashboard() {
                 </div>
             </div>
         </div>
+        </MemberLayout>
     )
 }

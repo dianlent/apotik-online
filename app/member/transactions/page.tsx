@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { Package, Calendar, CreditCard, Eye, ArrowLeft, Clock, CheckCircle, XCircle } from 'lucide-react'
 import { useToast } from '@/context/ToastContext'
 import AuthGuard from '@/components/AuthGuard'
+import MemberLayout from '@/components/member/MemberLayout'
 
 interface Order {
     id: string
@@ -27,9 +28,9 @@ interface OrderItem {
 
 export default function MemberTransactionsPage() {
     return (
-        <AuthGuard>
+        <MemberLayout>
             <MemberTransactionsContent />
-        </AuthGuard>
+        </MemberLayout>
     )
 }
 
