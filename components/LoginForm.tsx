@@ -125,10 +125,10 @@ export default function LoginForm() {
 
                         <div className="text-center">
                             <Link 
-                                href="/register-kasir" 
+                                href="/register" 
                                 className="text-sm font-medium text-green-600 hover:text-green-500"
                             >
-                                Daftar sebagai Kasir
+                                Daftar sebagai Member
                             </Link>
                         </div>
                     </form>
