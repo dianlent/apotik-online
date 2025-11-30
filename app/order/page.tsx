@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { ShoppingCart, Plus, Minus, Trash2, Package, CreditCard, Search, Filter } from 'lucide-react'
 import { useToast } from '@/context/ToastContext'
 import Image from 'next/image'
+import QRCode from 'qrcode'
 
 interface Product {
     id: string
@@ -271,11 +272,28 @@ export default function OrderPage() {
             const reference = data.reference || data.merchantOrderId || responseData.reference || orderId
 
             if (qrString) {
-                // Redirect to payment page with QRIS
-                const qrisUrl = `data:image/png;base64,${qrString}`
-                localStorage.setItem('qrisImage', qrisUrl)
-                localStorage.setItem('qrisReference', reference)
-                router.push(`/payment/qris?reference=${reference}`)
+                // Generate QR code image from QRIS string
+                try {
+                    const qrCodeDataUrl = await QRCode.toDataURL(qrString, {
+                        width: 400,
+                        margin: 2,
+                        color: {
+                            dark: '#000000',
+                            light: '#FFFFFF'
+                        }
+                    })
+                    
+                    // Store QR code image and reference
+                    localStorage.setItem('qrisImage', qrCodeDataUrl)
+                    localStorage.setItem('qrisReference', reference)
+                    localStorage.setItem('qrisString', qrString)
+                    
+                    // Redirect to payment page
+                    router.push(`/payment/qris?reference=${reference}`)
+                } catch (qrError) {
+                    console.error('Error generating QR code:', qrError)
+                    throw new Error('Gagal membuat QR code. Silakan coba lagi.')
+                }
             } else {
                 console.error('QRIS data not found in response:', responseData)
                 throw new Error(`QRIS tidak tersedia. Silakan periksa konfigurasi Duitku di Settings. Error: ${data.message || responseData.message || 'Unknown error'}`)
