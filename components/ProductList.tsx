@@ -1,69 +1,70 @@
 'use client'
 
 import { Product } from '@/types'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useCart } from '@/context/CartContext'
 import { useToast } from '@/context/ToastContext'
-
-const MOCK_PRODUCTS: Product[] = [
-    {
-        id: '1',
-        name: 'Paracetamol 500mg',
-        description: 'Pain reliever and fever reducer',
-        price: 5000,
-        stock: 100,
-        image_url: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400&h=400&fit=crop'
-    },
-    {
-        id: '2',
-        name: 'Amoxicillin 500mg',
-        description: 'Antibiotic for bacterial infections',
-        price: 15000,
-        stock: 50,
-        image_url: 'https://images.unsplash.com/photo-1587854692152-cbe660dbde88?w=400&h=400&fit=crop'
-    },
-    {
-        id: '3',
-        name: 'Vitamin C 1000mg',
-        description: 'Immune system booster',
-        price: 25000,
-        stock: 200,
-        image_url: 'https://images.unsplash.com/photo-1550572017-edd951aa8f72?w=400&h=400&fit=crop'
-    },
-    {
-        id: '4',
-        name: 'Ibuprofen 400mg',
-        description: 'Anti-inflammatory pain relief',
-        price: 8000,
-        stock: 150,
-        image_url: 'https://images.unsplash.com/photo-1585435557343-3b092031a831?w=400&h=400&fit=crop'
-    },
-    {
-        id: '5',
-        name: 'Multivitamin Complex',
-        description: 'Daily essential vitamins and minerals',
-        price: 35000,
-        stock: 80,
-        image_url: 'https://images.unsplash.com/photo-1628771065518-0d82f1938462?w=400&h=400&fit=crop'
-    },
-    {
-        id: '6',
-        name: 'Cetirizine 10mg',
-        description: 'Allergy relief medication',
-        price: 12000,
-        stock: 120,
-        image_url: 'https://images.unsplash.com/photo-1471864190281-a93a3070b6de?w=400&h=400&fit=crop'
-    }
-]
+import { createClient } from '@/lib/supabase/client'
 
 export default function ProductList() {
-    const [products] = useState<Product[]>(MOCK_PRODUCTS)
+    const [products, setProducts] = useState<Product[]>([])
+    const [loading, setLoading] = useState(true)
     const { addToCart } = useCart()
     const { showToast } = useToast()
+    const supabase = createClient()
+
+    useEffect(() => {
+        loadProducts()
+    }, [])
+
+    async function loadProducts() {
+        try {
+            setLoading(true)
+            const { data, error } = await supabase
+                .from('products')
+                .select('*')
+                .gt('stock', 0) // Only show products in stock
+                .order('name')
+
+            if (error) throw error
+            setProducts(data || [])
+        } catch (error) {
+            console.error('Error loading products:', error)
+            showToast('Gagal memuat produk', 'error')
+        } finally {
+            setLoading(false)
+        }
+    }
 
     const handleAddToCart = (product: Product) => {
         addToCart(product)
         showToast(`${product.name} added to cart!`)
+    }
+
+    if (loading) {
+        return (
+            <div className="bg-transparent">
+                <div className="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">
+                    <div className="text-center py-12">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                        <p className="mt-4 text-gray-600">Memuat produk...</p>
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
+    if (products.length === 0) {
+        return (
+            <div className="bg-transparent">
+                <div className="mx-auto max-w-2xl px-4 sm:px-6 lg:max-w-7xl lg:px-8">
+                    <div className="text-center py-12">
+                        <p className="text-gray-600 text-lg">Belum ada produk tersedia</p>
+                        <p className="text-gray-500 text-sm mt-2">Silakan tambahkan produk melalui Admin Dashboard</p>
+                    </div>
+                </div>
+            </div>
+        )
     }
 
     return (
