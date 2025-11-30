@@ -36,7 +36,14 @@ export default function GeneralSettingsPage() {
 
     useEffect(() => {
         if (generalSettings) {
-            setSettings(generalSettings)
+            // Auto-fill callback and return URLs if empty
+            const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
+            const updatedSettings = {
+                ...generalSettings,
+                duitkuCallbackUrl: generalSettings.duitkuCallbackUrl || `${appUrl}/api/payment/callback`,
+                duitkuReturnUrl: generalSettings.duitkuReturnUrl || `${appUrl}/payment/success`
+            }
+            setSettings(updatedSettings)
         }
     }, [generalSettings])
 
@@ -318,31 +325,67 @@ export default function GeneralSettingsPage() {
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
                                         Callback URL
                                     </label>
-                                    <input
-                                        type="url"
-                                        value={settings.duitkuCallbackUrl}
-                                        onChange={(e) => setSettings({ ...settings, duitkuCallbackUrl: e.target.value })}
-                                        placeholder="https://your-domain.com/api/payment/callback"
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
-                                    />
+                                    <div className="relative">
+                                        <input
+                                            type="url"
+                                            value={settings.duitkuCallbackUrl}
+                                            onChange={(e) => setSettings({ ...settings, duitkuCallbackUrl: e.target.value })}
+                                            placeholder="https://your-domain.com/api/payment/callback"
+                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin
+                                                setSettings({ ...settings, duitkuCallbackUrl: `${appUrl}/api/payment/callback` })
+                                            }}
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                                        >
+                                            Auto-fill
+                                        </button>
+                                    </div>
                                     <p className="text-xs text-gray-500 mt-1">
                                         URL untuk menerima notifikasi pembayaran dari Duitku
                                     </p>
+                                    {settings.duitkuCallbackUrl && (
+                                        <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-xs">
+                                            <span className="text-green-700 font-semibold">✓ URL:</span>
+                                            <code className="ml-1 text-green-800">{settings.duitkuCallbackUrl}</code>
+                                        </div>
+                                    )}
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
                                         Return URL
                                     </label>
-                                    <input
-                                        type="url"
-                                        value={settings.duitkuReturnUrl}
-                                        onChange={(e) => setSettings({ ...settings, duitkuReturnUrl: e.target.value })}
-                                        placeholder="https://your-domain.com/payment/success"
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
-                                    />
+                                    <div className="relative">
+                                        <input
+                                            type="url"
+                                            value={settings.duitkuReturnUrl}
+                                            onChange={(e) => setSettings({ ...settings, duitkuReturnUrl: e.target.value })}
+                                            placeholder="https://your-domain.com/payment/success"
+                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin
+                                                setSettings({ ...settings, duitkuReturnUrl: `${appUrl}/payment/success` })
+                                            }}
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                                        >
+                                            Auto-fill
+                                        </button>
+                                    </div>
                                     <p className="text-xs text-gray-500 mt-1">
                                         URL redirect setelah customer menyelesaikan pembayaran
                                     </p>
+                                    {settings.duitkuReturnUrl && (
+                                        <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-xs">
+                                            <span className="text-green-700 font-semibold">✓ URL:</span>
+                                            <code className="ml-1 text-green-800">{settings.duitkuReturnUrl}</code>
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
                                     <div>
