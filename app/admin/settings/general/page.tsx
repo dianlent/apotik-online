@@ -3,13 +3,13 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import AuthGuard from '@/components/AuthGuard'
-import { Save, Building2, Mail, Phone, MapPin, CreditCard, Banknote, QrCode, Landmark } from 'lucide-react'
+import { Save, Building2, Mail, Phone, MapPin, CreditCard, Banknote, QrCode, Landmark, Webhook, Package } from 'lucide-react'
 import { useToast } from '@/context/ToastContext'
 import { useSettings } from '@/context/SettingsContext'
 
 export default function GeneralSettingsPage() {
     const [loading, setLoading] = useState(false)
-    const [activeTab, setActiveTab] = useState<'store' | 'gateway'>('store')
+    const [activeTab, setActiveTab] = useState<'store' | 'gateway' | 'webhook'>('store')
     const { generalSettings, updateGeneralSettings } = useSettings()
     const [settings, setSettings] = useState({
         storeName: '',
@@ -29,7 +29,11 @@ export default function GeneralSettingsPage() {
         enableCash: true,
         enableCard: true,
         enableQris: true,
-        enableTransfer: true
+        enableTransfer: true,
+        n8nContactWebhook: '',
+        n8nOrderWebhook: '',
+        n8nRoleRequestWebhook: '',
+        n8nEnabled: false
     })
     const supabase = createClient()
     const { showToast } = useToast()
@@ -41,7 +45,11 @@ export default function GeneralSettingsPage() {
             const updatedSettings = {
                 ...generalSettings,
                 duitkuCallbackUrl: generalSettings.duitkuCallbackUrl || `${appUrl}/api/payment/callback`,
-                duitkuReturnUrl: generalSettings.duitkuReturnUrl || `${appUrl}/payment/success`
+                duitkuReturnUrl: generalSettings.duitkuReturnUrl || `${appUrl}/payment/success`,
+                n8nContactWebhook: generalSettings.n8nContactWebhook || '',
+                n8nOrderWebhook: generalSettings.n8nOrderWebhook || '',
+                n8nRoleRequestWebhook: generalSettings.n8nRoleRequestWebhook || '',
+                n8nEnabled: generalSettings.n8nEnabled || false
             }
             setSettings(updatedSettings)
         }
@@ -97,6 +105,17 @@ export default function GeneralSettingsPage() {
                             >
                                 <QrCode className="inline h-5 w-5 mr-2" />
                                 Payment Gateway
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('webhook')}
+                                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                                    activeTab === 'webhook'
+                                        ? 'border-blue-500 text-blue-600'
+                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                }`}
+                            >
+                                <Webhook className="inline h-5 w-5 mr-2" />
+                                N8N Webhook
                             </button>
                         </nav>
                     </div>
@@ -417,6 +436,157 @@ export default function GeneralSettingsPage() {
                             </div>
                         </div>
                         </div>
+                        )}
+
+                        {/* N8N Webhook Tab */}
+                        {activeTab === 'webhook' && (
+                        <>
+                        <div>
+                            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                                <Webhook className="h-5 w-5 mr-2 text-blue-600" />
+                                Konfigurasi N8N Webhook
+                            </h2>
+                            <p className="text-sm text-gray-600 mb-6">
+                                Integrasikan sistem dengan N8N untuk automasi workflow seperti notifikasi, email, dan proses bisnis lainnya.
+                            </p>
+
+                            {/* Enable N8N */}
+                            <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <label className="font-medium text-gray-900 text-lg">
+                                            Aktifkan N8N Webhook
+                                        </label>
+                                        <p className="text-sm text-gray-600 mt-1">
+                                            Enable untuk mengirim data ke N8N workflows
+                                        </p>
+                                    </div>
+                                    <label className="relative inline-flex items-center cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={settings.n8nEnabled}
+                                            onChange={(e) => setSettings({ ...settings, n8nEnabled: e.target.checked })}
+                                            className="sr-only peer"
+                                        />
+                                        <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600"></div>
+                                        <span className="ml-3 text-sm font-medium text-gray-900">
+                                            {settings.n8nEnabled ? 'Aktif' : 'Nonaktif'}
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            {/* Webhook URLs */}
+                            <div className="space-y-6">
+                                {/* Contact Form Webhook */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        <Mail className="inline h-4 w-4 mr-1" />
+                                        Contact Form Webhook URL
+                                    </label>
+                                    <input
+                                        type="url"
+                                        value={settings.n8nContactWebhook}
+                                        onChange={(e) => setSettings({ ...settings, n8nContactWebhook: e.target.value })}
+                                        placeholder="https://your-n8n-instance.com/webhook/contact"
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Webhook untuk menerima data dari contact form (halaman /contact)
+                                    </p>
+                                </div>
+
+                                {/* Order Webhook */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        <Package className="inline h-4 w-4 mr-1" />
+                                        Order Webhook URL
+                                    </label>
+                                    <input
+                                        type="url"
+                                        value={settings.n8nOrderWebhook}
+                                        onChange={(e) => setSettings({ ...settings, n8nOrderWebhook: e.target.value })}
+                                        placeholder="https://your-n8n-instance.com/webhook/order"
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Webhook untuk menerima data pesanan baru dari customer
+                                    </p>
+                                </div>
+
+                                {/* Role Request Webhook */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        <Building2 className="inline h-4 w-4 mr-1" />
+                                        Role Request Webhook URL
+                                    </label>
+                                    <input
+                                        type="url"
+                                        value={settings.n8nRoleRequestWebhook}
+                                        onChange={(e) => setSettings({ ...settings, n8nRoleRequestWebhook: e.target.value })}
+                                        placeholder="https://your-n8n-instance.com/webhook/role-request"
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Webhook untuk notifikasi saat ada permintaan perubahan role (kasir/apoteker)
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Info Box */}
+                            <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                <h3 className="font-semibold text-blue-900 mb-2 flex items-center">
+                                    <Webhook className="h-4 w-4 mr-2" />
+                                    Cara Setup N8N Webhook
+                                </h3>
+                                <ol className="text-sm text-blue-800 space-y-2 list-decimal list-inside">
+                                    <li>Buat workflow di N8N dengan trigger "Webhook"</li>
+                                    <li>Copy webhook URL dari N8N</li>
+                                    <li>Paste URL ke field yang sesuai di atas</li>
+                                    <li>Aktifkan N8N Webhook dengan toggle switch</li>
+                                    <li>Simpan pengaturan</li>
+                                </ol>
+                            </div>
+
+                            {/* Example Payload */}
+                            <div className="mt-6 bg-gray-50 border border-gray-200 rounded-lg p-4">
+                                <h3 className="font-semibold text-gray-900 mb-2">📦 Contoh Payload</h3>
+                                <div className="space-y-3">
+                                    <div>
+                                        <p className="text-xs font-medium text-gray-700 mb-1">Contact Form:</p>
+                                        <pre className="text-xs bg-gray-800 text-green-400 p-3 rounded overflow-x-auto">
+{`{
+  "name": "John Doe",
+  "email": "john@example.com",
+  "phone": "081234567890",
+  "subject": "Pertanyaan",
+  "message": "Halo..."
+}`}
+                                        </pre>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-medium text-gray-700 mb-1">Order:</p>
+                                        <pre className="text-xs bg-gray-800 text-green-400 p-3 rounded overflow-x-auto">
+{`{
+  "orderId": "ORDER-123456",
+  "orderNumber": "#12345678",
+  "total": 150000,
+  "items": [...],
+  "customer": {...}
+}`}
+                                        </pre>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Warning */}
+                            <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                                <p className="text-sm text-yellow-800">
+                                    <strong>⚠️ Penting:</strong> Pastikan N8N instance Anda dapat diakses dari internet dan webhook URL sudah benar. Test webhook setelah konfigurasi untuk memastikan berfungsi dengan baik.
+                                </p>
+                            </div>
+                        </div>
+                        </>
                         )}
 
                         {/* Save Button */}
