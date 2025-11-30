@@ -59,6 +59,7 @@ export default function Navbar() {
     const getDashboardLink = () => {
         if (userRole === 'admin') return '/admin'
         if (userRole === 'kasir') return '/kasir'
+        if (userRole === 'customer') return '/member'
         return null
     }
 
