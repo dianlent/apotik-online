@@ -75,10 +75,12 @@ export default function Navbar() {
                                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                                     <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                                 </span>
-                                Open 24/7
+                                Buka 24/7
                             </span>
                             <span className="hidden sm:inline">•</span>
-                            <span className="hidden sm:inline">Free shipping for orders over Rp 100.000</span>
+                            <span className="hidden sm:inline">✓ Obat Original & Terjamin</span>
+                            <span className="hidden md:inline">•</span>
+                            <span className="hidden md:inline">🚀 Pengiriman Cepat</span>
                         </div>
                         <div className="flex items-center space-x-3">
                             <a href="tel:+6281234567890" className="hover:text-blue-200 transition-colors">
