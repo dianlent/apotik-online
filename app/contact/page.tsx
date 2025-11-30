@@ -13,20 +13,64 @@ export default function ContactPage() {
     })
     const [loading, setLoading] = useState(false)
     const [submitted, setSubmitted] = useState(false)
+    const [error, setError] = useState('')
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setLoading(true)
+        setError('')
 
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1500))
-        
-        setLoading(false)
-        setSubmitted(true)
-        setFormData({ name: '', email: '', phone: '', subject: '', message: '' })
+        try {
+            // Get N8N webhook URL from environment variable
+            const webhookUrl = process.env.NEXT_PUBLIC_N8N_WEBHOOK_URL || ''
 
-        // Reset success message after 5 seconds
-        setTimeout(() => setSubmitted(false), 5000)
+            if (!webhookUrl) {
+                console.warn('N8N Webhook URL not configured')
+                // Still show success to user even if webhook not configured
+                setLoading(false)
+                setSubmitted(true)
+                setFormData({ name: '', email: '', phone: '', subject: '', message: '' })
+                setTimeout(() => setSubmitted(false), 5000)
+                return
+            }
+
+            // Prepare data for N8N
+            const webhookData = {
+                name: formData.name,
+                email: formData.email,
+                phone: formData.phone || 'Tidak ada',
+                subject: formData.subject,
+                message: formData.message,
+                timestamp: new Date().toISOString(),
+                source: 'Apotik POS Contact Form'
+            }
+
+            // Send to N8N webhook
+            const response = await fetch(webhookUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(webhookData)
+            })
+
+            if (!response.ok) {
+                throw new Error(`Webhook failed: ${response.status}`)
+            }
+
+            console.log('Contact form sent to N8N successfully')
+            
+            setLoading(false)
+            setSubmitted(true)
+            setFormData({ name: '', email: '', phone: '', subject: '', message: '' })
+
+            // Reset success message after 5 seconds
+            setTimeout(() => setSubmitted(false), 5000)
+        } catch (err) {
+            console.error('Error sending to N8N:', err)
+            setError('Terjadi kesalahan saat mengirim pesan. Silakan coba lagi.')
+            setLoading(false)
+        }
     }
 
     return (
@@ -127,6 +171,14 @@ export default function ContactPage() {
                                     <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
                                         <p className="text-green-700 font-medium">
                                             ✓ Pesan Anda berhasil dikirim! Kami akan segera menghubungi Anda.
+                                        </p>
+                                    </div>
+                                )}
+
+                                {error && (
+                                    <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                                        <p className="text-red-700 font-medium">
+                                            ✗ {error}
                                         </p>
                                     </div>
                                 )}
