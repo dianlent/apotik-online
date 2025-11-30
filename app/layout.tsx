@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import ConditionalNavbar from "@/components/ConditionalNavbar";
+import ConditionalFooter from "@/components/ConditionalFooter";
 import { CartProvider } from "@/context/CartContext";
 import { ToastProvider } from "@/context/ToastContext";
 import { SettingsProvider } from "@/context/SettingsContext";
@@ -34,10 +35,13 @@ export default function RootLayout({
         <SettingsProvider>
           <CartProvider>
             <ToastProvider>
-              <ConditionalNavbar />
-              <main>
-                {children}
-              </main>
+              <div className="flex flex-col min-h-screen">
+                <ConditionalNavbar />
+                <main className="flex-1">
+                  {children}
+                </main>
+                <ConditionalFooter />
+              </div>
             </ToastProvider>
           </CartProvider>
         </SettingsProvider>

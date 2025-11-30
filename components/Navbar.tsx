@@ -63,27 +63,59 @@ export default function Navbar() {
     }
 
     return (
-        <nav className="bg-white/80 backdrop-blur-lg shadow-sm sticky top-0 z-50 border-b border-gray-100">
+        <nav className="bg-white/95 backdrop-blur-lg shadow-lg sticky top-0 z-50 border-b border-gray-200">
+            {/* Top Banner */}
+            <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white py-2">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="flex justify-between items-center text-xs sm:text-sm">
+                        <div className="flex items-center space-x-4">
+                            <span className="flex items-center">
+                                <span className="relative flex h-2 w-2 mr-2">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                                </span>
+                                Open 24/7
+                            </span>
+                            <span className="hidden sm:inline">•</span>
+                            <span className="hidden sm:inline">Free shipping for orders over Rp 100.000</span>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                            <a href="tel:+6281234567890" className="hover:text-blue-200 transition-colors">
+                                📞 +62 812-3456-7890
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Main Navbar */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between h-16">
                     <div className="flex">
                         <div className="flex-shrink-0 flex items-center">
-                            <Link href="/" className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                                Apotik POS
+                            <Link href="/" className="flex items-center space-x-2 group">
+                                <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center transform group-hover:scale-110 transition-transform shadow-lg">
+                                    <span className="text-white font-bold text-xl">A</span>
+                                </div>
+                                <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                                    Apotik POS
+                                </span>
                             </Link>
                         </div>
-                        <div className="hidden sm:ml-8 sm:flex sm:space-x-4">
+                        <div className="hidden sm:ml-8 sm:flex sm:space-x-2">
                             <Link
                                 href="/"
-                                className="text-gray-700 hover:text-blue-600 inline-flex items-center px-3 py-2 text-sm font-medium transition-colors rounded-lg hover:bg-blue-50"
+                                className="text-gray-700 hover:text-blue-600 inline-flex items-center px-4 py-2 text-sm font-medium transition-all rounded-lg hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 relative group"
                             >
-                                Home
+                                <span className="relative z-10">Home</span>
+                                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-600 to-indigo-600 group-hover:w-full transition-all duration-300"></span>
                             </Link>
                             <Link
                                 href="/products"
-                                className="text-gray-700 hover:text-blue-600 inline-flex items-center px-3 py-2 text-sm font-medium transition-colors rounded-lg hover:bg-blue-50"
+                                className="text-gray-700 hover:text-blue-600 inline-flex items-center px-4 py-2 text-sm font-medium transition-all rounded-lg hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 relative group"
                             >
-                                Products
+                                <span className="relative z-10">Products</span>
+                                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-600 to-indigo-600 group-hover:w-full transition-all duration-300"></span>
                             </Link>
                         </div>
                     </div>
