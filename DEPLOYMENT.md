@@ -4,21 +4,27 @@
 
 - Vercel account
 - Supabase project
-- Pakasir account (optional for payment gateway)
+- Duitku merchant account (optional for payment gateway)
 
 ## Environment Variables
 
-Set these in Vercel Dashboard → Settings → Environment Variables:
+Set these in **Vercel Dashboard → Project Settings → Environment Variables**:
 
+**Required:**
 ```bash
-# Supabase
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-
-# Optional: Pakasir (can be set via admin panel)
-NEXT_PUBLIC_PAKASIR_MERCHANT_CODE=your_merchant_code
-NEXT_PUBLIC_PAKASIR_API_KEY=your_api_key
+NEXT_PUBLIC_APP_URL=https://your-app.vercel.app
 ```
+
+**Optional (Duitku Payment Gateway):**
+```bash
+NEXT_PUBLIC_DUITKU_MERCHANT_CODE=your_merchant_code
+NEXT_PUBLIC_DUITKU_API_KEY=your_api_key
+NEXT_PUBLIC_DUITKU_SANDBOX=false
+```
+
+> **Note:** Payment gateway credentials can also be configured via Admin Panel → Settings → Payment after deployment.
 
 ## Deployment Steps
 
@@ -40,8 +46,13 @@ git push origin main
 
 ### 3. Configure Environment Variables
 
-Add the environment variables listed above in:
-- Project Settings → Environment Variables
+**IMPORTANT:** In Vercel Dashboard:
+1. Go to **Project Settings → Environment Variables**
+2. Add each variable listed above
+3. Select which environments (Production, Preview, Development)
+4. Click **Save**
+
+**Do not use Vercel Secrets** unless you specifically need them. Regular environment variables are sufficient.
 
 ### 4. Deploy
 
@@ -61,18 +72,22 @@ Go to Supabase SQL Editor and run:
 -- 4. add_payment_fields_to_orders.sql
 ```
 
-### 2. Update Pakasir URLs
+### 2. Configure Payment Gateway (Optional)
 
-In Admin → Settings → General:
+If using Duitku:
 
-```
-Callback URL: https://your-app.vercel.app/api/payment/callback
-Return URL: https://your-app.vercel.app/payment/success
-```
+1. **In Duitku Dashboard**, register these URLs:
+   - Callback URL: `https://your-app.vercel.app/api/payment/callback`
+   - Return URL: `https://your-app.vercel.app/payment/success`
 
-Register these URLs in Pakasir Dashboard.
+2. **In Your App**, go to Admin → Settings → Payment and configure:
+   - Merchant Code
+   - API Key
+   - Sandbox mode (disable for production)
 
 ### 3. Create Admin User
+
+After your first user registration, promote them to admin:
 
 ```sql
 -- In Supabase SQL Editor
@@ -80,6 +95,8 @@ UPDATE profiles
 SET role = 'admin' 
 WHERE id = 'your_user_id';
 ```
+
+You can find your user ID in the Supabase Dashboard under Authentication → Users.
 
 ## Vercel Configuration
 
@@ -116,9 +133,10 @@ WHERE id = 'your_user_id';
 
 ### Payment Gateway Issues
 
-1. Verify Pakasir credentials
-2. Check callback URL is registered
+1. Verify Duitku credentials in Admin → Settings
+2. Check callback URL is registered in Duitku Dashboard
 3. Enable sandbox mode for testing
+4. Check API logs in Vercel Functions for detailed errors
 
 ## Performance Optimization
 
