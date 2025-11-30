@@ -246,25 +246,36 @@ export default function OrderPage() {
 
             if (!response.ok) {
                 const error = await response.json()
-                throw new Error(error.error || 'Gagal membuat pembayaran')
+                console.error('QRIS API Error:', error)
+                throw new Error(error.error || error.message || 'Gagal membuat pembayaran')
             }
 
             const data = await response.json()
+            console.log('QRIS Response:', data)
 
             // Store order info in localStorage
             localStorage.setItem('lastOrderId', orderId)
             localStorage.setItem('lastOrderNumber', orderNumber)
             localStorage.setItem('lastOrderAmount', total.toString())
 
-            // Show QRIS
-            if (data.qrString) {
+            // Check response structure
+            if (!data) {
+                throw new Error('Response kosong dari server')
+            }
+
+            // Show QRIS - check both possible response formats
+            const qrString = data.qrString || data.qr_string || data.qrcode
+            const reference = data.reference || data.merchantOrderId || orderId
+
+            if (qrString) {
                 // Redirect to payment page with QRIS
-                const qrisUrl = `data:image/png;base64,${data.qrString}`
+                const qrisUrl = `data:image/png;base64,${qrString}`
                 localStorage.setItem('qrisImage', qrisUrl)
-                localStorage.setItem('qrisReference', data.reference)
-                router.push(`/payment/qris?reference=${data.reference}`)
+                localStorage.setItem('qrisReference', reference)
+                router.push(`/payment/qris?reference=${reference}`)
             } else {
-                throw new Error('QRIS tidak tersedia')
+                console.error('QRIS data not found in response:', data)
+                throw new Error(`QRIS tidak tersedia. Silakan periksa konfigurasi Duitku di Settings. Error: ${data.message || 'Unknown error'}`)
             }
 
         } catch (error: any) {
