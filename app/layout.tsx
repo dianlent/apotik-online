@@ -18,8 +18,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Apotik POS",
-  description: "Point of Sale System for Pharmacy",
+  title: "Apotik POS - Your Trusted Online Pharmacy",
+  description: "Point of Sale System for Pharmacy - Fast, Reliable, and Secure Healthcare Services",
+  viewport: "width=device-width, initial-scale=1, maximum-scale=5",
+  themeColor: "#2563eb",
 };
 
 export default function RootLayout({
