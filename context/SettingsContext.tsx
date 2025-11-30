@@ -23,6 +23,11 @@ interface GeneralSettings {
     enableCard: boolean
     enableQris: boolean
     enableTransfer: boolean
+    // N8N Webhooks
+    n8nContactWebhook: string
+    n8nOrderWebhook: string
+    n8nRoleRequestWebhook: string
+    n8nEnabled: boolean
 }
 
 interface SettingsContextType {
@@ -50,7 +55,12 @@ const defaultSettings: GeneralSettings = {
     enableCash: true,
     enableCard: true,
     enableQris: true,
-    enableTransfer: true
+    enableTransfer: true,
+    // N8N Webhooks
+    n8nContactWebhook: '',
+    n8nOrderWebhook: '',
+    n8nRoleRequestWebhook: '',
+    n8nEnabled: false
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined)
