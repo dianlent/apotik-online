@@ -2,7 +2,6 @@
 
 import { useCart } from '@/context/CartContext'
 import { useState } from 'react'
-import { pakasir } from '@/lib/pakasir'
 import { useRouter } from 'next/navigation'
 
 export default function Checkout() {
@@ -14,21 +13,37 @@ export default function Checkout() {
     const handlePayment = async () => {
         setLoading(true)
         try {
-            // Create order in backend (mock for now)
+            // Create order ID
             const orderId = `ORDER-${Date.now()}`
             const finalTotal = total + shippingCost
 
-            const transaction = await pakasir.createTransaction(finalTotal, orderId)
+            // Call Duitku QRIS payment API
+            const response = await fetch('/api/payment/qris', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    orderId,
+                    amount: finalTotal,
+                    customerName: 'Customer', // You can add user info from auth context
+                    customerEmail: 'customer@example.com', // You can add user info from auth context
+                    productDetails: `Order ${orderId}`
+                })
+            })
 
-            if (transaction.url) {
-                // In a real app, redirect to payment URL
-                alert(`Redirecting to Pakasir: ${transaction.url}`)
+            const result = await response.json()
+
+            if (result.success && result.data?.checkout_url) {
+                // Redirect to Duitku payment page
+                window.location.href = result.data.checkout_url
                 clearCart()
-                router.push('/') // Redirect home for now
+            } else {
+                alert(result.error || 'Payment failed. Please try again.')
             }
         } catch (error) {
             console.error('Payment failed', error)
-            alert('Payment failed')
+            alert('Payment failed. Please check your settings.')
         } finally {
             setLoading(false)
         }
@@ -77,7 +92,7 @@ export default function Checkout() {
                             disabled={loading}
                             className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-400"
                         >
-                            {loading ? 'Processing...' : 'Pay with Pakasir'}
+                            {loading ? 'Processing...' : 'Proceed to Payment'}
                         </button>
                     </div>
                 </dl>
