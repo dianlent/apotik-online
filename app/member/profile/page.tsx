@@ -399,29 +399,6 @@ export default function MemberProfilePage() {
                         </div>
                     </form>
                 </div>
-
-                {/* Info Box */}
-                <div className="mt-6 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                    <h3 className="font-semibold text-gray-900 mb-3">📦 Informasi Pengiriman</h3>
-                    <ul className="space-y-2 text-sm text-gray-600">
-                        <li className="flex items-start gap-2">
-                            <span className="text-green-600 mt-0.5">✓</span>
-                            <span>Pengiriman <strong>GRATIS</strong> untuk semua pemesanan online</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                            <span className="text-green-600 mt-0.5">✓</span>
-                            <span>Estimasi pengiriman 2-3 hari kerja</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                            <span className="text-green-600 mt-0.5">✓</span>
-                            <span>Nomor resi akan dikirim via email dan SMS</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                            <span className="text-green-600 mt-0.5">✓</span>
-                            <span>Pastikan alamat pengiriman sudah benar dan lengkap</span>
-                        </li>
-                    </ul>
-                </div>
             </div>
         </div>
         </MemberLayout>

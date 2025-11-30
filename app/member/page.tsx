@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ShoppingCart, Package, User } from 'lucide-react'
+import { ShoppingCart, Package } from 'lucide-react'
 import MemberLayout from '@/components/member/MemberLayout'
 
 export default function MemberDashboard() {
@@ -115,32 +115,8 @@ export default function MemberDashboard() {
                     </div>
                 </div>
 
-                {/* Profile & Help Section */}
-                <div className="mt-8 max-w-4xl mx-auto space-y-6">
-                    {/* Profile Card */}
-                    <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg shadow-lg p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <h3 className="text-xl font-bold mb-2">✏️ Edit Profil</h3>
-                                <p className="text-purple-100 mb-4">
-                                    Lengkapi profil Anda untuk pengiriman online GRATIS
-                                </p>
-                                <Link
-                                    href="/member/profile"
-                                    className="inline-flex items-center gap-2 px-6 py-3 bg-white text-purple-600 font-semibold rounded-lg hover:bg-purple-50 transition-all shadow-md"
-                                >
-                                    <User className="h-5 w-5" />
-                                    Kelola Profil
-                                </Link>
-                            </div>
-                            <div className="hidden sm:block">
-                                <div className="p-4 bg-white/20 rounded-full">
-                                    <User className="h-16 w-16" />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
+                {/* Help Section */}
+                <div className="mt-8 max-w-4xl mx-auto">
                     {/* Help Section */}
                     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                         <h3 className="font-semibold text-gray-900 mb-3">Butuh Bantuan?</h3>
