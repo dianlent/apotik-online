@@ -33,10 +33,16 @@ export type OrderStatus = 'pending' | 'paid' | 'shipped' | 'completed' | 'cancel
 
 export interface Order {
     id: string
+    order_number?: string | null
     user_id: string
     total: number
     shipping_cost: number
     status: OrderStatus
+    payment_method?: string | null
+    payment_status?: string | null
+    shipping_address?: string | null
+    shipping_name?: string | null
+    shipping_phone?: string | null
     created_at: string
 }
 

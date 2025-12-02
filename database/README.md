@@ -41,6 +41,19 @@ Script untuk **menghapus semua kategori lama** dan menambahkan 24 kategori baru 
 ### 3. `seed-pharmacy-categories-safe.sql` ✅ **RECOMMENDED**
 Script yang lebih **AMAN** dengan beberapa opsi:
 
+### 4. `02-alter-order-items.sql` 🔧 **FIX MIGRATION**
+Script untuk **menambahkan kolom yang hilang** di tabel `order_items`:
+- Menambahkan kolom: product_name, quantity, price, subtotal
+- Aman: Mengecek kolom sebelum menambahkan
+- Update data existing jika ada
+
+**Gunakan jika:**
+- Error "column product_name does not exist"
+- Tabel order_items sudah ada tapi struktur lama
+
+### 5. `fix-order-items-table.sql` 🔨 **RECREATE TABLE**
+Script untuk **recreate tabel order_items** dari awal:
+
 **Fitur:**
 - ✅ Tidak menghapus kategori secara otomatis
 - ✅ Menggunakan `ON CONFLICT DO NOTHING` untuk skip duplikasi
@@ -166,6 +179,32 @@ psql "postgresql://[user]:[password]@[host]:[port]/[database]" -f seed-pharmacy-
 **Solusi:**
 1. ⚠️ Jalankan **`01-create-tables.sql`** terlebih dahulu!
 2. Baru kemudian jalankan seed scripts
+
+### Error: "column order_items_1.product_name does not exist"
+**Penyebab:** Tabel `order_items` dibuat dengan struktur lama atau kolom hilang.
+
+**Solusi - Opsi 1 (AMAN - Ada data penting):**
+```sql
+-- Jalankan di SQL Editor
+-- File: 02-alter-order-items.sql
+```
+Script ini akan menambahkan kolom yang hilang tanpa menghapus data.
+
+**Solusi - Opsi 2 (CEPAT - Tidak ada data penting):**
+```sql
+-- Jalankan di SQL Editor
+-- File: fix-order-items-table.sql
+```
+⚠️ Script ini akan **DROP dan RECREATE** tabel order_items (data akan hilang!)
+
+**Solusi - Opsi 3 (Manual):**
+```sql
+-- Hapus dan buat ulang tabel
+DROP TABLE IF EXISTS order_items CASCADE;
+
+-- Lalu jalankan bagian CREATE TABLE order_items 
+-- dari file 01-create-tables.sql
+```
 
 ### Error: "duplicate key value violates unique constraint"
 **Penyebab:** Kategori dengan nama yang sama sudah ada.

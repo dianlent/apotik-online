@@ -8,9 +8,15 @@ import { useToast } from '@/context/ToastContext'
 import { useRouter } from 'next/navigation'
 import BarcodeScanner from './BarcodeScanner'
 
+interface Category {
+    id: string
+    name: string
+}
+
 export default function POSModule() {
     const [products, setProducts] = useState<Product[]>([])
     const [cart, setCart] = useState<CartItem[]>([])
+    const [categories, setCategories] = useState<Category[]>([])
     const [searchQuery, setSearchQuery] = useState('')
     const [selectedCategory, setSelectedCategory] = useState('ALL')
     const [loading, setLoading] = useState(false)
@@ -29,12 +35,25 @@ export default function POSModule() {
     const { showToast } = useToast()
     const router = useRouter()
 
-    const categories = ['ALL', 'Obat Umum', 'Obat Keras', 'Vitamin & Suplemen', 'Alat Kesehatan', 'Perawatan Tubuh']
-
     useEffect(() => {
+        loadCategories()
         loadProducts()
         loadUserInfo()
     }, [])
+
+    async function loadCategories() {
+        try {
+            const { data, error } = await supabase
+                .from('categories')
+                .select('id, name')
+                .order('name')
+
+            if (error) throw error
+            setCategories(data || [])
+        } catch (error) {
+            console.error('Error loading categories:', error)
+        }
+    }
 
     async function loadUserInfo() {
         try {
@@ -361,7 +380,7 @@ export default function POSModule() {
     const filteredProducts = products.filter(product => {
         const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                             product.description?.toLowerCase().includes(searchQuery.toLowerCase())
-        const matchesCategory = selectedCategory === 'ALL' || product.description?.includes(selectedCategory)
+        const matchesCategory = selectedCategory === 'ALL' || product.category_id === selectedCategory
         return matchesSearch && matchesCategory
     })
 
@@ -430,17 +449,27 @@ export default function POSModule() {
 
                     {/* Category Tabs */}
                     <div className="flex gap-2 overflow-x-auto pb-2">
+                        <button
+                            onClick={() => setSelectedCategory('ALL')}
+                            className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-colors ${
+                                selectedCategory === 'ALL'
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            }`}
+                        >
+                            Semua Produk
+                        </button>
                         {categories.map((category) => (
                             <button
-                                key={category}
-                                onClick={() => setSelectedCategory(category)}
+                                key={category.id}
+                                onClick={() => setSelectedCategory(category.id)}
                                 className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-colors ${
-                                    selectedCategory === category
+                                    selectedCategory === category.id
                                         ? 'bg-blue-600 text-white'
                                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                 }`}
                             >
-                                {category}
+                                {category.name}
                             </button>
                         ))}
                     </div>

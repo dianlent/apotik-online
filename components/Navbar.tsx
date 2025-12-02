@@ -7,6 +7,8 @@ import { useCart } from '@/context/CartContext'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { UserRole } from '@/types'
+import { useSettings } from '@/context/SettingsContext'
+import Image from 'next/image'
 
 export default function Navbar() {
     const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -16,6 +18,7 @@ export default function Navbar() {
     const [userRole, setUserRole] = useState<UserRole | null>(null)
     const supabase = createClient()
     const router = useRouter()
+    const { generalSettings } = useSettings()
 
     useEffect(() => {
         if (items.length > 0) {
@@ -97,11 +100,21 @@ export default function Navbar() {
                     <div className="flex">
                         <div className="flex-shrink-0 flex items-center">
                             <Link href="/" className="flex items-center space-x-2 group">
-                                <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center transform group-hover:scale-110 transition-transform shadow-lg">
-                                    <span className="text-white font-bold text-xl">A</span>
-                                </div>
+                                {generalSettings?.storeLogo ? (
+                                    <div className="w-10 h-10 rounded-lg overflow-hidden transform group-hover:scale-110 transition-transform shadow-lg">
+                                        <img 
+                                            src={generalSettings.storeLogo} 
+                                            alt={generalSettings.storeName || 'Logo'}
+                                            className="w-full h-full object-contain"
+                                        />
+                                    </div>
+                                ) : (
+                                    <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center transform group-hover:scale-110 transition-transform shadow-lg">
+                                        <span className="text-white font-bold text-xl">{generalSettings?.storeName?.charAt(0) || 'A'}</span>
+                                    </div>
+                                )}
                                 <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                                    Apotik POS
+                                    {generalSettings?.storeName || 'Apotik POS'}
                                 </span>
                             </Link>
                         </div>

@@ -24,17 +24,22 @@ export default function QRISPopup({
     onPaymentSuccess
 }: QRISPopupProps) {
     const [checking, setChecking] = useState(false)
-    const [countdown, setCountdown] = useState(300) // 5 minutes
+    const [countdown, setCountdown] = useState(180) // 3 minutes
     const [paymentStatus, setPaymentStatus] = useState<'pending' | 'success' | 'failed' | 'expired'>('pending')
 
     useEffect(() => {
         if (!isOpen) return
+
+        // Reset countdown and status when popup opens
+        setCountdown(180) // 3 minutes
+        setPaymentStatus('pending')
 
         // Start countdown
         const timer = setInterval(() => {
             setCountdown(prev => {
                 if (prev <= 1) {
                     clearInterval(timer)
+                    setPaymentStatus('expired')
                     return 0
                 }
                 return prev - 1
@@ -159,21 +164,50 @@ export default function QRISPopup({
                         )}
 
                         {/* Countdown Timer */}
-                        <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <div className={`mb-6 p-4 rounded-lg border ${
+                            countdown === 0 
+                                ? 'bg-red-50 border-red-200' 
+                                : countdown < 60 
+                                    ? 'bg-orange-50 border-orange-200' 
+                                    : 'bg-yellow-50 border-yellow-200'
+                        }`}>
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
-                                    <Clock className="h-5 w-5 text-yellow-600" />
-                                    <span className="text-sm font-medium text-yellow-800">
+                                    <Clock className={`h-5 w-5 ${
+                                        countdown === 0 
+                                            ? 'text-red-600' 
+                                            : countdown < 60 
+                                                ? 'text-orange-600 animate-pulse' 
+                                                : 'text-yellow-600'
+                                    }`} />
+                                    <span className={`text-sm font-medium ${
+                                        countdown === 0 
+                                            ? 'text-red-800' 
+                                            : countdown < 60 
+                                                ? 'text-orange-800' 
+                                                : 'text-yellow-800'
+                                    }`}>
                                         Waktu tersisa:
                                     </span>
                                 </div>
-                                <span className="text-lg font-bold text-yellow-900">
+                                <span className={`text-lg font-bold ${
+                                    countdown === 0 
+                                        ? 'text-red-900' 
+                                        : countdown < 60 
+                                            ? 'text-orange-900' 
+                                            : 'text-yellow-900'
+                                }`}>
                                     {formatTime(countdown)}
                                 </span>
                             </div>
                             {countdown === 0 && (
-                                <p className="text-xs text-yellow-800 mt-2">
-                                    ⚠️ Waktu pembayaran habis. Silakan coba lagi.
+                                <p className="text-xs text-red-800 mt-2 font-semibold">
+                                    ⚠️ Waktu pembayaran habis. Silakan tutup dan buat pesanan baru.
+                                </p>
+                            )}
+                            {countdown > 0 && countdown < 60 && (
+                                <p className="text-xs text-orange-800 mt-2">
+                                    ⏰ Segera selesaikan pembayaran!
                                 </p>
                             )}
                         </div>
@@ -214,10 +248,14 @@ export default function QRISPopup({
                         {/* Manual Check Button */}
                         <button
                             onClick={() => checkPaymentStatus()}
-                            disabled={checking}
+                            disabled={checking || countdown === 0}
                             className="w-full px-6 py-3 border-2 border-blue-600 text-blue-600 font-semibold rounded-lg hover:bg-blue-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                         >
-                            {checking ? 'Memeriksa...' : 'Cek Status Pembayaran'}
+                            {countdown === 0 
+                                ? 'Waktu Habis' 
+                                : checking 
+                                    ? 'Memeriksa...' 
+                                    : 'Cek Status Pembayaran'}
                         </button>
                     </div>
                 </div>

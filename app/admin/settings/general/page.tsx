@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import AuthGuard from '@/components/AuthGuard'
-import { Save, Building2, Mail, Phone, MapPin, CreditCard, Banknote, QrCode, Landmark, Webhook, Package } from 'lucide-react'
+import { Save, Building2, Mail, Phone, MapPin, CreditCard, Banknote, QrCode, Landmark, Webhook, Package, Image as ImageIcon, Upload } from 'lucide-react'
 import { useToast } from '@/context/ToastContext'
 import { useSettings } from '@/context/SettingsContext'
 
@@ -13,6 +13,7 @@ export default function GeneralSettingsPage() {
     const { generalSettings, updateGeneralSettings } = useSettings()
     const [settings, setSettings] = useState({
         storeName: '',
+        storeLogo: '',
         storeEmail: '',
         storePhone: '',
         storeAddress: '',
@@ -44,6 +45,7 @@ export default function GeneralSettingsPage() {
             const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
             const updatedSettings = {
                 ...generalSettings,
+                storeLogo: generalSettings.storeLogo || '',
                 duitkuCallbackUrl: generalSettings.duitkuCallbackUrl || `${appUrl}/api/payment/callback`,
                 duitkuReturnUrl: generalSettings.duitkuReturnUrl || `${appUrl}/payment/success`,
                 n8nContactWebhook: generalSettings.n8nContactWebhook || '',
@@ -178,6 +180,69 @@ export default function GeneralSettingsPage() {
                                         onChange={(e) => setSettings({ ...settings, storeAddress: e.target.value })}
                                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     />
+                                </div>
+                            </div>
+
+                            {/* Logo Upload */}
+                            <div className="mt-6 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl">
+                                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                                    <ImageIcon className="h-5 w-5 mr-2 text-blue-600" />
+                                    Logo Apotik
+                                </h3>
+                                <div className="flex items-start gap-6">
+                                    {/* Logo Preview */}
+                                    <div className="flex-shrink-0">
+                                        {settings.storeLogo ? (
+                                            <div className="relative group">
+                                                <img 
+                                                    src={settings.storeLogo} 
+                                                    alt="Logo Apotik" 
+                                                    className="w-32 h-32 object-contain border-2 border-gray-300 rounded-lg bg-white p-2"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setSettings({ ...settings, storeLogo: '' })}
+                                                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                >
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className="w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-white">
+                                                <ImageIcon className="h-12 w-12 text-gray-400" />
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Upload Form */}
+                                    <div className="flex-1">
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            URL Logo
+                                        </label>
+                                        <input
+                                            type="url"
+                                            value={settings.storeLogo}
+                                            onChange={(e) => setSettings({ ...settings, storeLogo: e.target.value })}
+                                            placeholder="https://example.com/logo.png"
+                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        />
+                                        <p className="text-xs text-gray-600 mt-2">
+                                            💡 <strong>Tips:</strong> Upload logo Anda ke layanan seperti{' '}
+                                            <a href="https://imgur.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                                                Imgur
+                                            </a>
+                                            {' '}atau{' '}
+                                            <a href="https://imgbb.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                                                ImgBB
+                                            </a>
+                                            , kemudian copy URL-nya ke sini.
+                                        </p>
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            Rekomendasi: PNG/SVG dengan background transparan, ukuran 200x200px
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                         </div>

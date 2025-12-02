@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Users, Package, ShoppingBag, LogOut } from 'lucide-react'
+import { LayoutDashboard, Users, Package, ShoppingBag, ShoppingCart, LogOut } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 

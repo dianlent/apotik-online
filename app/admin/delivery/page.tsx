@@ -3,28 +3,43 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import AuthGuard from '@/components/AuthGuard'
-import { Truck, Package, CheckCircle, Clock, MapPin, Phone, User, Calendar, Search } from 'lucide-react'
+import { Truck, Package, CheckCircle, Clock, MapPin, Phone, User, Calendar, Search, Printer, Download } from 'lucide-react'
 import { useToast } from '@/context/ToastContext'
+import { useSettings } from '@/context/SettingsContext'
+
+interface OrderItem {
+    id: string
+    product_name: string
+    quantity: number
+    price: number
+    subtotal: number
+}
 
 interface Order {
     id: string
+    order_number: string | null
     user_id: string
     total: number
     shipping_cost: number
     status: string
     payment_method: string | null
     payment_status: string | null
+    shipping_address: string | null
+    shipping_name: string | null
+    shipping_phone: string | null
     created_at: string
     profiles?: {
         full_name: string
-        email?: string
     }
+    order_items?: OrderItem[]
 }
 
 interface DeliveryStats {
     pending: number
-    inProgress: number
+    paid: number
+    shipped: number
     completed: number
+    cancelled: number
     total: number
 }
 
@@ -36,8 +51,10 @@ export default function DeliveryPage() {
     const [statusFilter, setStatusFilter] = useState<string>('all')
     const [stats, setStats] = useState<DeliveryStats>({
         pending: 0,
-        inProgress: 0,
+        paid: 0,
+        shipped: 0,
         completed: 0,
+        cancelled: 0,
         total: 0
     })
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
@@ -45,6 +62,7 @@ export default function DeliveryPage() {
     const [updatingStatus, setUpdatingStatus] = useState<string | null>(null)
     const supabase = createClient()
     const { showToast } = useToast()
+    const { generalSettings } = useSettings()
 
     useEffect(() => {
         loadOrders()
@@ -63,9 +81,15 @@ export default function DeliveryPage() {
                     *,
                     profiles (
                         full_name
+                    ),
+                    order_items (
+                        id,
+                        product_name,
+                        quantity,
+                        price,
+                        subtotal
                     )
                 `)
-                .in('status', ['paid', 'shipped', 'completed'])
                 .order('created_at', { ascending: false })
 
             if (error) throw error
@@ -73,14 +97,18 @@ export default function DeliveryPage() {
             setOrders(data || [])
 
             // Calculate stats
-            const pending = data?.filter(o => o.status === 'paid').length || 0
-            const inProgress = data?.filter(o => o.status === 'shipped').length || 0
+            const pending = data?.filter(o => o.status === 'pending').length || 0
+            const paid = data?.filter(o => o.status === 'paid').length || 0
+            const shipped = data?.filter(o => o.status === 'shipped').length || 0
             const completed = data?.filter(o => o.status === 'completed').length || 0
+            const cancelled = data?.filter(o => o.status === 'cancelled').length || 0
 
             setStats({
                 pending,
-                inProgress,
+                paid,
+                shipped,
                 completed,
+                cancelled,
                 total: data?.length || 0
             })
         } catch (error) {
@@ -133,11 +161,23 @@ export default function DeliveryPage() {
         }
     }
 
+    function handlePrint() {
+        window.print()
+    }
+
+    function handleDownloadPDF() {
+        // Menggunakan browser native print dialog dengan opsi "Save as PDF"
+        showToast('Silakan pilih "Save as PDF" di dialog print', 'info')
+        window.print()
+    }
+
     function getStatusBadge(status: string) {
         const badges = {
+            pending: { label: 'Menunggu Pembayaran', color: 'bg-orange-100 text-orange-800' },
             paid: { label: 'Menunggu Pengiriman', color: 'bg-yellow-100 text-yellow-800' },
             shipped: { label: 'Dalam Pengiriman', color: 'bg-blue-100 text-blue-800' },
-            completed: { label: 'Selesai', color: 'bg-green-100 text-green-800' }
+            completed: { label: 'Selesai', color: 'bg-green-100 text-green-800' },
+            cancelled: { label: 'Dibatalkan', color: 'bg-red-100 text-red-800' }
         }
         const badge = badges[status as keyof typeof badges] || { label: status, color: 'bg-gray-100 text-gray-800' }
         return (
@@ -149,12 +189,20 @@ export default function DeliveryPage() {
 
     function getStatusIcon(status: string) {
         switch (status) {
+            case 'pending':
+                return <Clock className="h-5 w-5 text-orange-600" />
             case 'paid':
-                return <Clock className="h-5 w-5 text-yellow-600" />
+                return <Package className="h-5 w-5 text-yellow-600" />
             case 'shipped':
                 return <Truck className="h-5 w-5 text-blue-600" />
             case 'completed':
                 return <CheckCircle className="h-5 w-5 text-green-600" />
+            case 'cancelled':
+                return (
+                    <svg className="h-5 w-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                )
             default:
                 return <Package className="h-5 w-5 text-gray-600" />
         }
@@ -171,45 +219,67 @@ export default function DeliveryPage() {
                     </div>
 
                     {/* Stats Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                        <div className="bg-white rounded-xl shadow-sm p-6">
-                            <div className="flex items-center justify-between mb-4">
-                                <div className="p-3 bg-yellow-100 rounded-lg">
-                                    <Clock className="h-6 w-6 text-yellow-600" />
+                    <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
+                        <div className="bg-white rounded-xl shadow-sm p-4">
+                            <div className="flex items-center justify-between mb-2">
+                                <div className="p-2 bg-orange-100 rounded-lg">
+                                    <Clock className="h-5 w-5 text-orange-600" />
                                 </div>
                             </div>
-                            <h3 className="text-gray-600 text-sm font-medium mb-1">Menunggu Pengiriman</h3>
-                            <p className="text-2xl font-bold text-gray-900">{stats.pending}</p>
+                            <h3 className="text-gray-600 text-xs font-medium mb-1">Menunggu Pembayaran</h3>
+                            <p className="text-xl font-bold text-gray-900">{stats.pending}</p>
                         </div>
 
-                        <div className="bg-white rounded-xl shadow-sm p-6">
-                            <div className="flex items-center justify-between mb-4">
-                                <div className="p-3 bg-blue-100 rounded-lg">
-                                    <Truck className="h-6 w-6 text-blue-600" />
+                        <div className="bg-white rounded-xl shadow-sm p-4">
+                            <div className="flex items-center justify-between mb-2">
+                                <div className="p-2 bg-yellow-100 rounded-lg">
+                                    <Package className="h-5 w-5 text-yellow-600" />
                                 </div>
                             </div>
-                            <h3 className="text-gray-600 text-sm font-medium mb-1">Dalam Pengiriman</h3>
-                            <p className="text-2xl font-bold text-gray-900">{stats.inProgress}</p>
+                            <h3 className="text-gray-600 text-xs font-medium mb-1">Menunggu Pengiriman</h3>
+                            <p className="text-xl font-bold text-gray-900">{stats.paid}</p>
                         </div>
 
-                        <div className="bg-white rounded-xl shadow-sm p-6">
-                            <div className="flex items-center justify-between mb-4">
-                                <div className="p-3 bg-green-100 rounded-lg">
-                                    <CheckCircle className="h-6 w-6 text-green-600" />
+                        <div className="bg-white rounded-xl shadow-sm p-4">
+                            <div className="flex items-center justify-between mb-2">
+                                <div className="p-2 bg-blue-100 rounded-lg">
+                                    <Truck className="h-5 w-5 text-blue-600" />
                                 </div>
                             </div>
-                            <h3 className="text-gray-600 text-sm font-medium mb-1">Selesai</h3>
-                            <p className="text-2xl font-bold text-gray-900">{stats.completed}</p>
+                            <h3 className="text-gray-600 text-xs font-medium mb-1">Dalam Pengiriman</h3>
+                            <p className="text-xl font-bold text-gray-900">{stats.shipped}</p>
                         </div>
 
-                        <div className="bg-white rounded-xl shadow-sm p-6">
-                            <div className="flex items-center justify-between mb-4">
-                                <div className="p-3 bg-purple-100 rounded-lg">
-                                    <Package className="h-6 w-6 text-purple-600" />
+                        <div className="bg-white rounded-xl shadow-sm p-4">
+                            <div className="flex items-center justify-between mb-2">
+                                <div className="p-2 bg-green-100 rounded-lg">
+                                    <CheckCircle className="h-5 w-5 text-green-600" />
                                 </div>
                             </div>
-                            <h3 className="text-gray-600 text-sm font-medium mb-1">Total Pesanan</h3>
-                            <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+                            <h3 className="text-gray-600 text-xs font-medium mb-1">Selesai</h3>
+                            <p className="text-xl font-bold text-gray-900">{stats.completed}</p>
+                        </div>
+
+                        <div className="bg-white rounded-xl shadow-sm p-4">
+                            <div className="flex items-center justify-between mb-2">
+                                <div className="p-2 bg-red-100 rounded-lg">
+                                    <svg className="h-5 w-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <h3 className="text-gray-600 text-xs font-medium mb-1">Dibatalkan</h3>
+                            <p className="text-xl font-bold text-gray-900">{stats.cancelled}</p>
+                        </div>
+
+                        <div className="bg-white rounded-xl shadow-sm p-4">
+                            <div className="flex items-center justify-between mb-2">
+                                <div className="p-2 bg-purple-100 rounded-lg">
+                                    <Package className="h-5 w-5 text-purple-600" />
+                                </div>
+                            </div>
+                            <h3 className="text-gray-600 text-xs font-medium mb-1">Total Pesanan</h3>
+                            <p className="text-xl font-bold text-gray-900">{stats.total}</p>
                         </div>
                     </div>
 
@@ -235,9 +305,11 @@ export default function DeliveryPage() {
                                 className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             >
                                 <option value="all">Semua Status</option>
+                                <option value="pending">Menunggu Pembayaran</option>
                                 <option value="paid">Menunggu Pengiriman</option>
                                 <option value="shipped">Dalam Pengiriman</option>
                                 <option value="completed">Selesai</option>
+                                <option value="cancelled">Dibatalkan</option>
                             </select>
                         </div>
                     </div>
@@ -262,7 +334,8 @@ export default function DeliveryPage() {
                                             <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Customer</th>
                                             <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">Tanggal</th>
                                             <th className="text-right py-4 px-6 text-sm font-semibold text-gray-700">Total</th>
-                                            <th className="text-center py-4 px-6 text-sm font-semibold text-gray-700">Status</th>
+                                            <th className="text-center py-4 px-6 text-sm font-semibold text-gray-700">Pembayaran</th>
+                                            <th className="text-center py-4 px-6 text-sm font-semibold text-gray-700">Status Pengiriman</th>
                                             <th className="text-center py-4 px-6 text-sm font-semibold text-gray-700">Aksi</th>
                                         </tr>
                                     </thead>
@@ -272,8 +345,8 @@ export default function DeliveryPage() {
                                                 <td className="py-4 px-6">
                                                     <div className="flex items-center gap-2">
                                                         {getStatusIcon(order.status)}
-                                                        <span className="text-sm font-mono text-gray-900">
-                                                            {order.id.slice(0, 8)}...
+                                                        <span className="text-sm font-semibold text-gray-900">
+                                                            {order.order_number || `#${order.id.slice(0, 8).toUpperCase()}`}
                                                         </span>
                                                     </div>
                                                 </td>
@@ -297,21 +370,43 @@ export default function DeliveryPage() {
                                                     </div>
                                                 </td>
                                                 <td className="py-4 px-6 text-center">
+                                                    {order.payment_status === 'paid' ? (
+                                                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                                                            <CheckCircle className="h-3 w-3" />
+                                                            Lunas
+                                                        </span>
+                                                    ) : order.payment_status === 'pending' ? (
+                                                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">
+                                                            <Clock className="h-3 w-3" />
+                                                            Menunggu
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-800">
+                                                            -
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td className="py-4 px-6 text-center">
                                                     <select
                                                         value={order.status}
                                                         onChange={(e) => updateOrderStatus(order.id, e.target.value)}
                                                         disabled={updatingStatus === order.id}
                                                         className={`px-3 py-1.5 rounded-lg text-xs font-semibold border-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer ${
-                                                            order.status === 'paid' 
+                                                            order.status === 'pending' 
+                                                                ? 'bg-orange-50 border-orange-200 text-orange-800 hover:bg-orange-100' 
+                                                                : order.status === 'paid' 
                                                                 ? 'bg-yellow-50 border-yellow-200 text-yellow-800 hover:bg-yellow-100' 
                                                                 : order.status === 'shipped' 
                                                                 ? 'bg-blue-50 border-blue-200 text-blue-800 hover:bg-blue-100' 
-                                                                : 'bg-green-50 border-green-200 text-green-800 hover:bg-green-100'
+                                                                : order.status === 'completed'
+                                                                ? 'bg-green-50 border-green-200 text-green-800 hover:bg-green-100'
+                                                                : 'bg-red-50 border-red-200 text-red-800 hover:bg-red-100'
                                                         }`}
                                                     >
                                                         <option value="paid">Menunggu Pengiriman</option>
                                                         <option value="shipped">Dalam Pengiriman</option>
                                                         <option value="completed">Selesai</option>
+                                                        <option value="cancelled">Dibatalkan</option>
                                                     </select>
                                                 </td>
                                                 <td className="py-4 px-6 text-center">
@@ -336,15 +431,54 @@ export default function DeliveryPage() {
                     {/* Detail Modal */}
                     {showDetailModal && selectedOrder && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                            <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6">
-                                <div className="flex items-center justify-between mb-6">
+                            <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 invoice-content">
+                                <div className="flex items-center justify-between mb-6 no-print">
                                     <h2 className="text-2xl font-bold text-gray-900">Detail Pesanan</h2>
-                                    <button
-                                        onClick={() => setShowDetailModal(false)}
-                                        className="text-gray-400 hover:text-gray-600"
-                                    >
-                                        ✕
-                                    </button>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={handleDownloadPDF}
+                                            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                                        >
+                                            <Download className="h-4 w-4" />
+                                            Download PDF
+                                        </button>
+                                        <button
+                                            onClick={handlePrint}
+                                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                        >
+                                            <Printer className="h-4 w-4" />
+                                            Cetak
+                                        </button>
+                                        <button
+                                            onClick={() => setShowDetailModal(false)}
+                                            className="text-gray-400 hover:text-gray-600"
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Print Header - Only visible when printing */}
+                                <div className="print-only mb-6">
+                                    <div className="text-center mb-6">
+                                        {generalSettings?.storeLogo && (
+                                            <div className="flex justify-center mb-4">
+                                                <img 
+                                                    src={generalSettings.storeLogo} 
+                                                    alt={generalSettings.storeName || 'Logo'} 
+                                                    className="h-16 w-auto object-contain"
+                                                />
+                                            </div>
+                                        )}
+                                        <h1 className="text-3xl font-bold text-gray-900 mb-2">INVOICE</h1>
+                                        <p className="text-sm text-gray-600 font-semibold">{generalSettings?.storeName || 'Apotik Online'}</p>
+                                        <p className="text-xs text-gray-500">{generalSettings?.storeAddress || 'Jl. Kesehatan No. 123, Jakarta'}</p>
+                                        <p className="text-xs text-gray-500">Telp: {generalSettings?.storePhone || '(021) 1234-5678'}</p>
+                                        {generalSettings?.storeEmail && (
+                                            <p className="text-xs text-gray-500">Email: {generalSettings.storeEmail}</p>
+                                        )}
+                                    </div>
+                                    <div className="border-b-2 border-gray-300 mb-4"></div>
                                 </div>
 
                                 <div className="space-y-6">
@@ -352,7 +486,9 @@ export default function DeliveryPage() {
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
                                             <p className="text-sm text-gray-600 mb-1">ID Pesanan</p>
-                                            <p className="text-sm font-mono font-semibold text-gray-900">{selectedOrder.id}</p>
+                                            <p className="text-base font-bold text-gray-900">
+                                                {selectedOrder.order_number || `#${selectedOrder.id.slice(0, 8).toUpperCase()}`}
+                                            </p>
                                         </div>
                                         <div>
                                             <p className="text-sm text-gray-600 mb-1">Tanggal</p>
@@ -367,10 +503,73 @@ export default function DeliveryPage() {
                                             </p>
                                         </div>
                                         <div>
-                                            <p className="text-sm text-gray-600 mb-1">Status Saat Ini</p>
+                                            <p className="text-sm text-gray-600 mb-1">Status Pengiriman</p>
                                             {getStatusBadge(selectedOrder.status)}
                                         </div>
                                     </div>
+
+                                    {/* Payment Status */}
+                                    <div className="border-t border-gray-200 pt-4 no-print">
+                                        <div className="p-4 bg-gray-50 rounded-lg">
+                                            <p className="text-sm text-gray-600 mb-1">Status Pembayaran</p>
+                                            {selectedOrder.payment_status === 'paid' ? (
+                                                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-800">
+                                                    <CheckCircle className="h-4 w-4" />
+                                                    Lunas (QRIS)
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-semibold bg-yellow-100 text-yellow-800">
+                                                    <Clock className="h-4 w-4" />
+                                                    Menunggu Pembayaran QRIS
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Shipping Address */}
+                                    {selectedOrder.shipping_address && (
+                                        <div className="border-t border-gray-200 pt-4">
+                                            <h3 className="text-sm font-semibold text-gray-900 mb-2">Alamat Pengiriman</h3>
+                                            <div className="p-4 bg-gray-50 rounded-lg">
+                                                <p className="text-sm font-medium text-gray-900">{selectedOrder.shipping_name}</p>
+                                                <p className="text-sm text-gray-700">{selectedOrder.shipping_phone}</p>
+                                                <p className="text-sm text-gray-700 mt-1">{selectedOrder.shipping_address}</p>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Order Items */}
+                                    {selectedOrder.order_items && selectedOrder.order_items.length > 0 && (
+                                        <div className="border-t border-gray-200 pt-4">
+                                            <h3 className="text-sm font-semibold text-gray-900 mb-3">Produk yang Dipesan</h3>
+                                            <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                                <table className="w-full">
+                                                    <thead className="bg-gray-50">
+                                                        <tr>
+                                                            <th className="text-left py-2 px-4 text-xs font-semibold text-gray-700">Produk</th>
+                                                            <th className="text-center py-2 px-4 text-xs font-semibold text-gray-700">Qty</th>
+                                                            <th className="text-right py-2 px-4 text-xs font-semibold text-gray-700">Harga</th>
+                                                            <th className="text-right py-2 px-4 text-xs font-semibold text-gray-700">Subtotal</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {selectedOrder.order_items.map((item) => (
+                                                            <tr key={item.id} className="border-t border-gray-100">
+                                                                <td className="py-2 px-4 text-sm text-gray-900">{item.product_name}</td>
+                                                                <td className="py-2 px-4 text-sm text-center text-gray-900">{item.quantity}</td>
+                                                                <td className="py-2 px-4 text-sm text-right text-gray-900">
+                                                                    Rp {item.price.toLocaleString()}
+                                                                </td>
+                                                                <td className="py-2 px-4 text-sm text-right font-semibold text-gray-900">
+                                                                    Rp {item.subtotal.toLocaleString()}
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {/* Payment Info */}
                                     <div className="border-t border-gray-200 pt-4">
@@ -399,8 +598,8 @@ export default function DeliveryPage() {
                                     </div>
 
                                     {/* Status Actions */}
-                                    <div className="border-t border-gray-200 pt-4">
-                                        <p className="text-sm font-medium text-gray-700 mb-3">Update Status Pengiriman</p>
+                                    <div className="border-t border-gray-200 pt-4 no-print">
+                                        <p className="text-sm font-medium text-gray-700 mb-3">Aksi Pengiriman</p>
                                         <div className="flex gap-3">
                                             {selectedOrder.status === 'paid' && (
                                                 <button
@@ -427,6 +626,14 @@ export default function DeliveryPage() {
                                                     ✓ Pengiriman Selesai
                                                 </div>
                                             )}
+                                            {selectedOrder.status === 'pending' && (
+                                                <div className="flex-1 px-4 py-3 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg text-center font-medium">
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <Clock className="h-5 w-5" />
+                                                        Menunggu Pembayaran Customer
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -435,6 +642,165 @@ export default function DeliveryPage() {
                     )}
                 </div>
             </div>
+
+            {/* Print Styles */}
+            <style jsx global>{`
+                @media print {
+                    @page {
+                        size: A4;
+                        margin: 10mm;
+                    }
+                    
+                    /* Hide everything except modal content */
+                    body * {
+                        visibility: hidden;
+                    }
+                    
+                    .fixed.inset-0 * {
+                        visibility: visible;
+                    }
+                    
+                    /* Hide modal overlay and make content full width */
+                    .fixed.inset-0 {
+                        position: static !important;
+                        background: white !important;
+                    }
+                    
+                    .fixed.inset-0 > div {
+                        max-width: 100% !important;
+                        box-shadow: none !important;
+                        border-radius: 0 !important;
+                        padding: 0 !important;
+                        margin: 0 !important;
+                    }
+                    
+                    /* Hide elements with no-print class */
+                    .no-print {
+                        display: none !important;
+                    }
+                    
+                    /* Show print-only elements */
+                    .print-only {
+                        display: block !important;
+                    }
+                    
+                    /* Compact print header */
+                    .print-only {
+                        margin-bottom: 8px !important;
+                    }
+                    
+                    .print-only h1 {
+                        font-size: 20pt !important;
+                        margin-bottom: 4px !important;
+                    }
+                    
+                    .print-only p {
+                        font-size: 9pt !important;
+                        margin: 0 !important;
+                        line-height: 1.2 !important;
+                    }
+                    
+                    .print-only .border-b-2 {
+                        margin: 8px 0 !important;
+                    }
+                    
+                    /* Compact spacing */
+                    .space-y-6 {
+                        gap: 8px !important;
+                    }
+                    
+                    .space-y-6 > div {
+                        margin-top: 0 !important;
+                        margin-bottom: 8px !important;
+                        padding-top: 6px !important;
+                        page-break-inside: avoid;
+                    }
+                    
+                    /* Compact grid */
+                    .grid {
+                        gap: 6px !important;
+                    }
+                    
+                    /* Compact text */
+                    .text-sm, .text-xs {
+                        font-size: 9pt !important;
+                        line-height: 1.2 !important;
+                    }
+                    
+                    .text-lg {
+                        font-size: 11pt !important;
+                    }
+                    
+                    .text-2xl {
+                        font-size: 14pt !important;
+                    }
+                    
+                    h3 {
+                        font-size: 10pt !important;
+                        margin-bottom: 4px !important;
+                    }
+                    
+                    /* Compact padding */
+                    .p-4, .p-6 {
+                        padding: 4px !important;
+                    }
+                    
+                    .py-2, .py-4 {
+                        padding-top: 2px !important;
+                        padding-bottom: 2px !important;
+                    }
+                    
+                    .px-4, .px-6 {
+                        padding-left: 4px !important;
+                        padding-right: 4px !important;
+                    }
+                    
+                    .mb-1, .mb-2, .mb-3, .mb-4, .mb-6 {
+                        margin-bottom: 2px !important;
+                    }
+                    
+                    .mt-1, .mt-4 {
+                        margin-top: 2px !important;
+                    }
+                    
+                    .pt-4 {
+                        padding-top: 6px !important;
+                    }
+                    
+                    /* Compact table */
+                    table {
+                        page-break-inside: avoid;
+                        font-size: 9pt !important;
+                    }
+                    
+                    table th, table td {
+                        padding: 3px 4px !important;
+                    }
+                    
+                    /* Remove background colors for print */
+                    .bg-gray-50, .bg-blue-50, .bg-yellow-50, .bg-green-50, .bg-gray-100 {
+                        background-color: white !important;
+                        border: 1px solid #e5e7eb !important;
+                    }
+                    
+                    .rounded-lg, .rounded-xl {
+                        border-radius: 4px !important;
+                    }
+                    
+                    /* Ensure single page */
+                    .invoice-content {
+                        max-height: 277mm !important;
+                        overflow: hidden !important;
+                    }
+                }
+                
+                /* Hide print-only elements on screen */
+                @media screen {
+                    .print-only {
+                        display: none !important;
+                    }
+                }
+            `}</style>
         </AuthGuard>
     )
 }

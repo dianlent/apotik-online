@@ -145,11 +145,21 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                     {sidebarOpen ? (
                         <>
                             <div className="flex items-center">
-                                <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-lg flex items-center justify-center font-bold text-gray-900">
-                                    {generalSettings.storeName.charAt(0).toUpperCase()}
-                                </div>
+                                {generalSettings?.storeLogo ? (
+                                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-white p-1">
+                                        <img 
+                                            src={generalSettings.storeLogo} 
+                                            alt={generalSettings.storeName || 'Logo'} 
+                                            className="w-full h-full object-contain"
+                                        />
+                                    </div>
+                                ) : (
+                                    <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-lg flex items-center justify-center font-bold text-gray-900">
+                                        {(generalSettings?.storeName || 'A').charAt(0).toUpperCase()}
+                                    </div>
+                                )}
                                 <div className="ml-3">
-                                    <h1 className="font-bold text-lg">{generalSettings.storeName}</h1>
+                                    <h1 className="font-bold text-lg">{generalSettings?.storeName || 'APOTIK POS'}</h1>
                                     <p className="text-xs text-gray-400">Admin Panel</p>
                                 </div>
                             </div>

@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 
 interface GeneralSettings {
     storeName: string
+    storeLogo: string
     storeEmail: string
     storePhone: string
     storeAddress: string
@@ -38,6 +39,7 @@ interface SettingsContextType {
 
 const defaultSettings: GeneralSettings = {
     storeName: 'APOTIK POS',
+    storeLogo: '',
     storeEmail: 'info@apotikpos.com',
     storePhone: '+62 812-3456-7890',
     storeAddress: 'Jl. Kesehatan No. 123, Jakarta',

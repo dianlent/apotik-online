@@ -4,8 +4,9 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import AuthGuard from '@/components/AuthGuard'
 import { Order, OrderStatus } from '@/types'
-import { Search, Eye } from 'lucide-react'
+import { Search, Eye, RefreshCw, X, Package, User, MapPin, Calendar, CreditCard, Plus } from 'lucide-react'
 import { useToast } from '@/context/ToastContext'
+import Link from 'next/link'
 
 interface OrderWithProfile extends Order {
     profiles?: {
@@ -17,15 +18,52 @@ export default function AdminOrdersPage() {
     const [orders, setOrders] = useState<OrderWithProfile[]>([])
     const [loading, setLoading] = useState(true)
     const [searchQuery, setSearchQuery] = useState('')
+    const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
+    const [isRefreshing, setIsRefreshing] = useState(false)
+    const [selectedOrder, setSelectedOrder] = useState<OrderWithProfile | null>(null)
+    const [showDetailModal, setShowDetailModal] = useState(false)
+    const [orderItems, setOrderItems] = useState<any[]>([])
+    const [loadingItems, setLoadingItems] = useState(false)
     const supabase = createClient()
     const { showToast } = useToast()
 
     useEffect(() => {
         loadOrders()
+
+        // Auto-refresh setiap 30 detik
+        const intervalId = setInterval(() => {
+            loadOrders(true) // silent refresh
+        }, 30000)
+
+        // Realtime subscription untuk update langsung
+        const channel = supabase
+            .channel('orders-changes')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'orders'
+                },
+                (payload) => {
+                    console.log('Order changed:', payload)
+                    loadOrders(true) // silent refresh saat ada perubahan
+                }
+            )
+            .subscribe()
+
+        return () => {
+            clearInterval(intervalId)
+            supabase.removeChannel(channel)
+        }
     }, [])
 
-    async function loadOrders() {
-        setLoading(true)
+    async function loadOrders(silent = false) {
+        if (!silent) {
+            setLoading(true)
+        } else {
+            setIsRefreshing(true)
+        }
         try {
             // Get orders
             const { data: ordersData, error: ordersError } = await supabase
@@ -60,12 +98,49 @@ export default function AdminOrdersPage() {
             })) || []
 
             setOrders(ordersWithProfiles)
+            setLastUpdate(new Date())
         } catch (error) {
             console.error('Error loading orders:', error)
-            showToast('Gagal memuat pesanan', 'error')
+            if (!silent) {
+                showToast('Gagal memuat pesanan', 'error')
+            }
         } finally {
             setLoading(false)
+            setIsRefreshing(false)
         }
+    }
+
+    function handleManualRefresh() {
+        loadOrders()
+        showToast('Data pesanan diperbarui', 'success')
+    }
+
+    async function handleViewDetail(order: OrderWithProfile) {
+        setSelectedOrder(order)
+        setShowDetailModal(true)
+        setLoadingItems(true)
+        
+        try {
+            // Fetch order items
+            const { data, error } = await supabase
+                .from('order_items')
+                .select('*')
+                .eq('order_id', order.id)
+            
+            if (error) throw error
+            setOrderItems(data || [])
+        } catch (error) {
+            console.error('Error loading order items:', error)
+            showToast('Gagal memuat detail pesanan', 'error')
+        } finally {
+            setLoadingItems(false)
+        }
+    }
+
+    function closeDetailModal() {
+        setShowDetailModal(false)
+        setSelectedOrder(null)
+        setOrderItems([])
     }
 
     const updateOrderStatus = async (orderId: string, newStatus: OrderStatus) => {
@@ -129,8 +204,42 @@ export default function AdminOrdersPage() {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     {/* Header */}
                     <div className="mb-8">
-                        <h1 className="text-3xl font-bold text-gray-900">Daftar Pesanan</h1>
-                        <p className="text-gray-600 mt-2">Monitor semua transaksi</p>
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h1 className="text-3xl font-bold text-gray-900">Daftar Pesanan</h1>
+                                <div className="flex items-center gap-3 mt-2">
+                                    <p className="text-gray-600">Monitor semua transaksi</p>
+                                    <span className="text-gray-400">•</span>
+                                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                                        <span className={`inline-flex items-center ${isRefreshing ? 'text-blue-600' : ''}`}>
+                                            <RefreshCw className={`h-3 w-3 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
+                                            {isRefreshing ? 'Memperbarui...' : 'Auto-refresh aktif'}
+                                        </span>
+                                        <span className="text-gray-400">•</span>
+                                        <span className="text-xs">
+                                            Update: {lastUpdate.toLocaleTimeString('id-ID')}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <Link
+                                    href="/kasir/create-order"
+                                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                                >
+                                    <Plus className="h-4 w-4" />
+                                    Buat Order
+                                </Link>
+                                <button
+                                    onClick={handleManualRefresh}
+                                    disabled={loading || isRefreshing}
+                                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <RefreshCw className={`h-4 w-4 ${loading || isRefreshing ? 'animate-spin' : ''}`} />
+                                    Refresh
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
                     {/* Search */}
@@ -222,7 +331,8 @@ export default function AdminOrdersPage() {
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                     <button
-                                                        className="text-blue-600 hover:text-blue-900"
+                                                        onClick={() => handleViewDetail(order)}
+                                                        className="text-blue-600 hover:text-blue-900 transition-colors"
                                                         title="Lihat Detail"
                                                     >
                                                         <Eye className="h-5 w-5" />
@@ -240,6 +350,157 @@ export default function AdminOrdersPage() {
                             </div>
                         )}
                     </div>
+
+                    {/* Detail Modal */}
+                    {showDetailModal && selectedOrder && (
+                        <div className="fixed inset-0 z-50 overflow-y-auto">
+                            <div className="fixed inset-0 bg-black bg-opacity-50 transition-opacity" onClick={closeDetailModal} />
+                            
+                            <div className="flex min-h-full items-center justify-center p-4">
+                                <div className="relative bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+                                    {/* Header */}
+                                    <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 rounded-t-xl">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <h2 className="text-2xl font-bold">Detail Pesanan</h2>
+                                                <p className="text-blue-100 text-sm mt-1">
+                                                    ID: {selectedOrder.order_number || selectedOrder.id.slice(0, 8)}
+                                                </p>
+                                            </div>
+                                            <button
+                                                onClick={closeDetailModal}
+                                                className="p-2 hover:bg-white/20 rounded-full transition-colors"
+                                            >
+                                                <X className="h-6 w-6" />
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Content */}
+                                    <div className="p-6 space-y-6">
+                                        {/* Customer Info */}
+                                        <div className="bg-gray-50 rounded-lg p-4">
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <User className="h-5 w-5 text-blue-600" />
+                                                <h3 className="font-semibold text-gray-900">Informasi Pelanggan</h3>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <p className="text-xs text-gray-600">Nama</p>
+                                                    <p className="text-sm font-medium text-gray-900">
+                                                        {selectedOrder.profiles?.full_name || 'N/A'}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs text-gray-600">Tanggal Pesanan</p>
+                                                    <p className="text-sm font-medium text-gray-900">
+                                                        {new Date(selectedOrder.created_at).toLocaleDateString('id-ID', {
+                                                            year: 'numeric',
+                                                            month: 'long',
+                                                            day: 'numeric',
+                                                            hour: '2-digit',
+                                                            minute: '2-digit'
+                                                        })}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Shipping Info */}
+                                        {selectedOrder.shipping_address && (
+                                            <div className="bg-blue-50 rounded-lg p-4">
+                                                <div className="flex items-center gap-2 mb-3">
+                                                    <MapPin className="h-5 w-5 text-blue-600" />
+                                                    <h3 className="font-semibold text-gray-900">Alamat Pengiriman</h3>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <p className="text-sm font-medium text-gray-900">{selectedOrder.shipping_name}</p>
+                                                    <p className="text-sm text-gray-700">{selectedOrder.shipping_phone}</p>
+                                                    <p className="text-sm text-gray-700">{selectedOrder.shipping_address}</p>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Order Items */}
+                                        <div className="bg-white rounded-lg border border-gray-200">
+                                            <div className="flex items-center gap-2 p-4 border-b border-gray-200">
+                                                <Package className="h-5 w-5 text-blue-600" />
+                                                <h3 className="font-semibold text-gray-900">Produk yang Dipesan</h3>
+                                            </div>
+                                            <div className="p-4">
+                                                {loadingItems ? (
+                                                    <div className="text-center py-8">
+                                                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                                                        <p className="text-sm text-gray-600 mt-2">Memuat produk...</p>
+                                                    </div>
+                                                ) : orderItems.length === 0 ? (
+                                                    <p className="text-center text-gray-500 py-8">Tidak ada produk</p>
+                                                ) : (
+                                                    <div className="space-y-3">
+                                                        {orderItems.map((item, index) => (
+                                                            <div key={item.id || index} className="flex items-start justify-between gap-4 pb-3 border-b border-gray-100 last:border-0">
+                                                                <div className="flex-1">
+                                                                    <p className="text-sm font-medium text-gray-900">{item.product_name}</p>
+                                                                    <p className="text-xs text-gray-600 mt-1">
+                                                                        {item.quantity} × Rp {item.price.toLocaleString()}
+                                                                    </p>
+                                                                </div>
+                                                                <p className="text-sm font-semibold text-gray-900">
+                                                                    Rp {item.subtotal.toLocaleString()}
+                                                                </p>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Payment Info */}
+                                        <div className="bg-green-50 rounded-lg p-4">
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <CreditCard className="h-5 w-5 text-green-600" />
+                                                <h3 className="font-semibold text-gray-900">Informasi Pembayaran</h3>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <div className="flex justify-between text-sm">
+                                                    <span className="text-gray-600">Subtotal</span>
+                                                    <span className="font-medium text-gray-900">
+                                                        Rp {(selectedOrder.total - (selectedOrder.shipping_cost || 0)).toLocaleString()}
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between text-sm">
+                                                    <span className="text-gray-600">Ongkos Kirim</span>
+                                                    <span className="font-medium text-gray-900">
+                                                        Rp {(selectedOrder.shipping_cost || 0).toLocaleString()}
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between text-base pt-2 border-t border-green-200">
+                                                    <span className="font-semibold text-gray-900">Total</span>
+                                                    <span className="font-bold text-green-600 text-lg">
+                                                        Rp {selectedOrder.total.toLocaleString()}
+                                                    </span>
+                                                </div>
+                                                {selectedOrder.payment_method && (
+                                                    <div className="flex justify-between text-sm pt-2">
+                                                        <span className="text-gray-600">Metode Pembayaran</span>
+                                                        <span className="font-medium text-gray-900 uppercase">
+                                                            {selectedOrder.payment_method}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                <div className="flex justify-between text-sm">
+                                                    <span className="text-gray-600">Status</span>
+                                                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(selectedOrder.status)}`}>
+                                                        {getStatusLabel(selectedOrder.status)}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </AuthGuard>
