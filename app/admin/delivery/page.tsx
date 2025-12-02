@@ -42,6 +42,7 @@ export default function DeliveryPage() {
     })
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
     const [showDetailModal, setShowDetailModal] = useState(false)
+    const [updatingStatus, setUpdatingStatus] = useState<string | null>(null)
     const supabase = createClient()
     const { showToast } = useToast()
 
@@ -109,7 +110,8 @@ export default function DeliveryPage() {
         setFilteredOrders(filtered)
     }
 
-    async function updateOrderStatus(orderId: string, newStatus: string) {
+    async function updateOrderStatus(orderId: string, newStatus: string, closeModal: boolean = false) {
+        setUpdatingStatus(orderId)
         try {
             const { error } = await supabase
                 .from('orders')
@@ -119,11 +121,15 @@ export default function DeliveryPage() {
             if (error) throw error
 
             showToast('Status pesanan berhasil diupdate', 'success')
-            loadOrders()
-            setShowDetailModal(false)
+            await loadOrders()
+            if (closeModal) {
+                setShowDetailModal(false)
+            }
         } catch (error) {
             console.error('Error updating order status:', error)
             showToast('Gagal mengupdate status', 'error')
+        } finally {
+            setUpdatingStatus(null)
         }
     }
 
@@ -291,7 +297,22 @@ export default function DeliveryPage() {
                                                     </div>
                                                 </td>
                                                 <td className="py-4 px-6 text-center">
-                                                    {getStatusBadge(order.status)}
+                                                    <select
+                                                        value={order.status}
+                                                        onChange={(e) => updateOrderStatus(order.id, e.target.value)}
+                                                        disabled={updatingStatus === order.id}
+                                                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold border-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer ${
+                                                            order.status === 'paid' 
+                                                                ? 'bg-yellow-50 border-yellow-200 text-yellow-800 hover:bg-yellow-100' 
+                                                                : order.status === 'shipped' 
+                                                                ? 'bg-blue-50 border-blue-200 text-blue-800 hover:bg-blue-100' 
+                                                                : 'bg-green-50 border-green-200 text-green-800 hover:bg-green-100'
+                                                        }`}
+                                                    >
+                                                        <option value="paid">Menunggu Pengiriman</option>
+                                                        <option value="shipped">Dalam Pengiriman</option>
+                                                        <option value="completed">Selesai</option>
+                                                    </select>
                                                 </td>
                                                 <td className="py-4 px-6 text-center">
                                                     <button
@@ -383,20 +404,22 @@ export default function DeliveryPage() {
                                         <div className="flex gap-3">
                                             {selectedOrder.status === 'paid' && (
                                                 <button
-                                                    onClick={() => updateOrderStatus(selectedOrder.id, 'shipped')}
-                                                    className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center justify-center gap-2"
+                                                    onClick={() => updateOrderStatus(selectedOrder.id, 'shipped', true)}
+                                                    disabled={updatingStatus === selectedOrder.id}
+                                                    className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                                 >
                                                     <Truck className="h-5 w-5" />
-                                                    Kirim Pesanan
+                                                    {updatingStatus === selectedOrder.id ? 'Memproses...' : 'Kirim Pesanan'}
                                                 </button>
                                             )}
                                             {selectedOrder.status === 'shipped' && (
                                                 <button
-                                                    onClick={() => updateOrderStatus(selectedOrder.id, 'completed')}
-                                                    className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center justify-center gap-2"
+                                                    onClick={() => updateOrderStatus(selectedOrder.id, 'completed', true)}
+                                                    disabled={updatingStatus === selectedOrder.id}
+                                                    className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                                 >
                                                     <CheckCircle className="h-5 w-5" />
-                                                    Selesaikan Pengiriman
+                                                    {updatingStatus === selectedOrder.id ? 'Memproses...' : 'Selesaikan Pengiriman'}
                                                 </button>
                                             )}
                                             {selectedOrder.status === 'completed' && (

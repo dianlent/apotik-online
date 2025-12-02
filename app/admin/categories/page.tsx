@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import AuthGuard from '@/components/AuthGuard'
-import { Plus, Edit, Trash2, Tag, Package } from 'lucide-react'
+import { Plus, Edit, Trash2, Tag, Package, Download } from 'lucide-react'
 import { useToast } from '@/context/ToastContext'
+import { seedPharmacyCategories } from '@/lib/seed-categories'
 
 interface Category {
     id: string
@@ -19,6 +20,7 @@ export default function CategoriesPage() {
     const [loading, setLoading] = useState(true)
     const [showModal, setShowModal] = useState(false)
     const [editingCategory, setEditingCategory] = useState<Category | null>(null)
+    const [seeding, setSeeding] = useState(false)
     const [formData, setFormData] = useState({
         name: '',
         description: ''
@@ -146,6 +148,27 @@ export default function CategoriesPage() {
         }
     }
 
+    const handleSeedCategories = async () => {
+        if (!confirm('Apakah Anda ingin mengimpor 24 kategori obat default untuk apotik?\n\nKategori yang sudah ada tidak akan digandakan.')) return
+
+        setSeeding(true)
+        try {
+            const result = await seedPharmacyCategories()
+            
+            if (result.success) {
+                showToast(result.message, 'success')
+                await loadCategories()
+            } else {
+                showToast(result.message, 'error')
+            }
+        } catch (error) {
+            console.error('Error seeding categories:', error)
+            showToast('Gagal mengimpor kategori', 'error')
+        } finally {
+            setSeeding(false)
+        }
+    }
+
     const totalProducts = categories.reduce((sum, cat) => sum + (cat.product_count || 0), 0)
 
     return (
@@ -157,13 +180,23 @@ export default function CategoriesPage() {
                         <h1 className="text-3xl font-bold text-gray-900">Kategori Produk</h1>
                         <p className="text-gray-600 mt-2">Kelola kategori untuk mengorganisir produk</p>
                     </div>
-                    <button
-                        onClick={() => openModal()}
-                        className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md"
-                    >
-                        <Plus className="h-5 w-5 mr-2" />
-                        Tambah Kategori
-                    </button>
+                    <div className="flex gap-3">
+                        <button
+                            onClick={handleSeedCategories}
+                            disabled={seeding}
+                            className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <Download className="h-5 w-5 mr-2" />
+                            {seeding ? 'Mengimpor...' : 'Import Kategori Default'}
+                        </button>
+                        <button
+                            onClick={() => openModal()}
+                            className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md"
+                        >
+                            <Plus className="h-5 w-5 mr-2" />
+                            Tambah Kategori
+                        </button>
+                    </div>
                 </div>
 
                 {/* Stats */}

@@ -6,9 +6,10 @@ import Footer from './Footer'
 export default function ConditionalFooter() {
     const pathname = usePathname()
     
-    // Hide footer on admin, kasir, and auth pages
+    // Hide footer on admin, kasir, member, and auth pages
     const hideFooter = pathname?.startsWith('/admin') || 
                        pathname?.startsWith('/kasir') ||
+                       pathname?.startsWith('/member') ||
                        pathname?.startsWith('/login') ||
                        pathname?.startsWith('/register')
     
