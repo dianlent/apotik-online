@@ -122,15 +122,54 @@ export default function QRISPopup({
                     )}
 
                     {/* Header */}
-                    <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 text-center rounded-t-2xl">
-                        <QrCode className="h-12 w-12 mx-auto mb-3" />
-                        <h2 className="text-2xl font-bold">Scan QRIS</h2>
-                        <p className="text-blue-100 mt-2 text-sm">
-                            Gunakan aplikasi e-wallet atau mobile banking
-                        </p>
-                        <div className="mt-4 bg-white bg-opacity-20 rounded-lg p-3">
-                            <p className="text-sm text-blue-100">Total Pembayaran</p>
-                            <p className="text-2xl font-bold">Rp {amount.toLocaleString()}</p>
+                    <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 text-white p-8 text-center rounded-t-2xl relative overflow-hidden">
+                        {/* Decorative circles */}
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full -mr-16 -mt-16"></div>
+                        <div className="absolute bottom-0 left-0 w-24 h-24 bg-white opacity-10 rounded-full -ml-12 -mb-12"></div>
+                        
+                        <div className="relative z-10">
+                            <div className="inline-block p-4 bg-white rounded-2xl shadow-lg mb-4">
+                                <QrCode className="h-12 w-12 text-indigo-600" />
+                            </div>
+                            <h2 className="text-3xl font-bold mb-2">Scan QRIS</h2>
+                            <p className="text-purple-100 text-sm mb-6">
+                                Gunakan aplikasi e-wallet atau mobile banking
+                            </p>
+                            
+                            {/* Order ID & Total in Cards */}
+                            <div className="grid grid-cols-1 gap-3 max-w-md mx-auto">
+                                {/* Order ID Card */}
+                                {orderId && (
+                                    <div className="bg-white text-gray-900 rounded-xl p-4 shadow-lg">
+                                        <div className="flex items-center justify-between">
+                                            <div className="text-left">
+                                                <p className="text-xs font-medium text-gray-500 mb-1">ID Pesanan</p>
+                                                <p className="text-base font-mono font-bold text-indigo-600">{orderId}</p>
+                                            </div>
+                                            <div className="p-2 bg-indigo-100 rounded-lg">
+                                                <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                                                </svg>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                                
+                                {/* Total Payment Card */}
+                                <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl p-4 shadow-lg">
+                                    <div className="flex items-center justify-between">
+                                        <div className="text-left">
+                                            <p className="text-xs font-medium text-green-100 mb-1">Total Pembayaran</p>
+                                            <p className="text-2xl font-bold">Rp {amount.toLocaleString()}</p>
+                                        </div>
+                                        <div className="p-2 bg-white/20 rounded-lg">
+                                            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 

@@ -345,9 +345,16 @@ export default function DeliveryPage() {
                                                 <td className="py-4 px-6">
                                                     <div className="flex items-center gap-2">
                                                         {getStatusIcon(order.status)}
-                                                        <span className="text-sm font-semibold text-gray-900">
-                                                            {order.order_number || `#${order.id.slice(0, 8).toUpperCase()}`}
-                                                        </span>
+                                                        <div className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-lg px-3 py-1.5">
+                                                            <div className="p-1 bg-indigo-100 rounded">
+                                                                <svg className="w-3 h-3 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                                                                </svg>
+                                                            </div>
+                                                            <span className="text-xs font-mono font-bold text-indigo-600">
+                                                                {order.order_number || `#${order.id.slice(0, 8).toUpperCase()}`}
+                                                            </span>
+                                                        </div>
                                                     </div>
                                                 </td>
                                                 <td className="py-4 px-6">
@@ -482,14 +489,25 @@ export default function DeliveryPage() {
                                 </div>
 
                                 <div className="space-y-6">
+                                    {/* Order ID Card - Full Width */}
+                                    <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl p-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-indigo-100 rounded-lg">
+                                                <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                                                </svg>
+                                            </div>
+                                            <div>
+                                                <p className="text-xs text-gray-600 font-medium mb-0.5">ID Pesanan</p>
+                                                <p className="text-lg font-mono font-bold text-indigo-600">
+                                                    {selectedOrder.order_number || `#${selectedOrder.id.slice(0, 8).toUpperCase()}`}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     {/* Order Info */}
                                     <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <p className="text-sm text-gray-600 mb-1">ID Pesanan</p>
-                                            <p className="text-base font-bold text-gray-900">
-                                                {selectedOrder.order_number || `#${selectedOrder.id.slice(0, 8).toUpperCase()}`}
-                                            </p>
-                                        </div>
                                         <div>
                                             <p className="text-sm text-gray-600 mb-1">Tanggal</p>
                                             <p className="text-sm font-semibold text-gray-900">

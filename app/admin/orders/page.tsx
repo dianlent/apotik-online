@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import AuthGuard from '@/components/AuthGuard'
 import { Order, OrderStatus } from '@/types'
-import { Search, Eye, RefreshCw, X, Package, User, MapPin, Calendar, CreditCard, Plus } from 'lucide-react'
+import { Search, Eye, RefreshCw, X, Package, User, MapPin, Calendar, CreditCard, Plus, Clock, CheckCircle, XCircle, TrendingUp, DollarSign } from 'lucide-react'
 import { useToast } from '@/context/ToastContext'
 import Link from 'next/link'
 
@@ -198,6 +198,19 @@ export default function AdminOrdersPage() {
         order.profiles?.full_name?.toLowerCase().includes(searchQuery.toLowerCase())
     )
 
+    // Calculate statistics
+    const stats = {
+        total: orders.length,
+        pending: orders.filter(o => o.status === 'pending').length,
+        paid: orders.filter(o => o.status === 'paid').length,
+        shipped: orders.filter(o => o.status === 'shipped').length,
+        completed: orders.filter(o => o.status === 'completed').length,
+        cancelled: orders.filter(o => o.status === 'cancelled').length,
+        totalRevenue: orders
+            .filter(o => o.status !== 'cancelled')
+            .reduce((sum, o) => sum + o.total, 0)
+    }
+
     return (
         <AuthGuard allowedRoles={['admin', 'kasir']}>
             <div className="min-h-screen bg-gray-50 py-8">
@@ -239,6 +252,86 @@ export default function AdminOrdersPage() {
                                     Refresh
                                 </button>
                             </div>
+                        </div>
+                    </div>
+
+                    {/* Statistics Cards */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
+                        {/* Total Orders */}
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                            <div className="flex items-center justify-between mb-2">
+                                <div className="p-2 bg-blue-100 rounded-lg">
+                                    <Package className="h-5 w-5 text-blue-600" />
+                                </div>
+                            </div>
+                            <h3 className="text-gray-600 text-xs font-medium mb-1">Total Pesanan</h3>
+                            <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+                        </div>
+
+                        {/* Pending */}
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                            <div className="flex items-center justify-between mb-2">
+                                <div className="p-2 bg-orange-100 rounded-lg">
+                                    <Clock className="h-5 w-5 text-orange-600" />
+                                </div>
+                            </div>
+                            <h3 className="text-gray-600 text-xs font-medium mb-1">Pending</h3>
+                            <p className="text-2xl font-bold text-orange-600">{stats.pending}</p>
+                        </div>
+
+                        {/* Paid */}
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                            <div className="flex items-center justify-between mb-2">
+                                <div className="p-2 bg-green-100 rounded-lg">
+                                    <CheckCircle className="h-5 w-5 text-green-600" />
+                                </div>
+                            </div>
+                            <h3 className="text-gray-600 text-xs font-medium mb-1">Dibayar</h3>
+                            <p className="text-2xl font-bold text-green-600">{stats.paid}</p>
+                        </div>
+
+                        {/* Shipped */}
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                            <div className="flex items-center justify-between mb-2">
+                                <div className="p-2 bg-blue-100 rounded-lg">
+                                    <TrendingUp className="h-5 w-5 text-blue-600" />
+                                </div>
+                            </div>
+                            <h3 className="text-gray-600 text-xs font-medium mb-1">Dikirim</h3>
+                            <p className="text-2xl font-bold text-blue-600">{stats.shipped}</p>
+                        </div>
+
+                        {/* Completed */}
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                            <div className="flex items-center justify-between mb-2">
+                                <div className="p-2 bg-purple-100 rounded-lg">
+                                    <CheckCircle className="h-5 w-5 text-purple-600" />
+                                </div>
+                            </div>
+                            <h3 className="text-gray-600 text-xs font-medium mb-1">Selesai</h3>
+                            <p className="text-2xl font-bold text-purple-600">{stats.completed}</p>
+                        </div>
+
+                        {/* Cancelled */}
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                            <div className="flex items-center justify-between mb-2">
+                                <div className="p-2 bg-red-100 rounded-lg">
+                                    <XCircle className="h-5 w-5 text-red-600" />
+                                </div>
+                            </div>
+                            <h3 className="text-gray-600 text-xs font-medium mb-1">Dibatalkan</h3>
+                            <p className="text-2xl font-bold text-red-600">{stats.cancelled}</p>
+                        </div>
+
+                        {/* Total Revenue */}
+                        <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl shadow-sm p-4 text-white">
+                            <div className="flex items-center justify-between mb-2">
+                                <div className="p-2 bg-white/20 rounded-lg">
+                                    <DollarSign className="h-5 w-5 text-white" />
+                                </div>
+                            </div>
+                            <h3 className="text-white/90 text-xs font-medium mb-1">Total Pendapatan</h3>
+                            <p className="text-xl font-bold">Rp {stats.totalRevenue.toLocaleString()}</p>
                         </div>
                     </div>
 
