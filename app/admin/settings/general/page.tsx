@@ -13,6 +13,7 @@ export default function GeneralSettingsPage() {
     const { generalSettings, updateGeneralSettings } = useSettings()
     const [settings, setSettings] = useState({
         storeName: '',
+        storeTagline: '',
         storeLogo: '',
         storeEmail: '',
         storePhone: '',
@@ -142,6 +143,18 @@ export default function GeneralSettingsPage() {
                                         type="text"
                                         value={settings.storeName}
                                         onChange={(e) => setSettings({ ...settings, storeName: e.target.value })}
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Tagline / Slogan
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={settings.storeTagline}
+                                        onChange={(e) => setSettings({ ...settings, storeTagline: e.target.value })}
+                                        placeholder="Solusi Kesehatan Terpercaya"
                                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     />
                                 </div>

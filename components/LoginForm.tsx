@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useToast } from '@/context/ToastContext'
+import { useSettings } from '@/context/SettingsContext'
 import { Mail, Lock, Eye, EyeOff, ShoppingBag, Shield, Zap } from 'lucide-react'
 
 export default function LoginForm() {
@@ -16,6 +17,7 @@ export default function LoginForm() {
     const router = useRouter()
     const supabase = createClient()
     const { showToast } = useToast()
+    const { generalSettings } = useSettings()
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -67,15 +69,29 @@ export default function LoginForm() {
                 {/* Left Side - Branding */}
                 <div className="hidden md:flex flex-col justify-center space-y-8 p-8">
                     <div className="space-y-4">
-                        <div className="flex items-center space-x-3">
-                            <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-2xl transform hover:scale-110 transition-transform">
-                                <span className="text-white font-bold text-3xl">A</span>
-                            </div>
+                        <div className="flex items-center space-x-4">
+                            {generalSettings?.storeLogo ? (
+                                <div className="w-16 h-16 rounded-2xl overflow-hidden bg-white shadow-2xl transform hover:scale-110 transition-transform p-2">
+                                    <img 
+                                        src={generalSettings.storeLogo} 
+                                        alt={generalSettings.storeName || 'Logo'} 
+                                        className="w-full h-full object-contain"
+                                    />
+                                </div>
+                            ) : (
+                                <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-2xl transform hover:scale-110 transition-transform">
+                                    <span className="text-white font-bold text-3xl">
+                                        {(generalSettings?.storeName || 'A').charAt(0).toUpperCase()}
+                                    </span>
+                                </div>
+                            )}
                             <div>
                                 <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                                    Apotik POS
+                                    {generalSettings?.storeName || 'Apotik POS'}
                                 </h1>
-                                <p className="text-gray-600 text-sm">Solusi Kesehatan Terpercaya</p>
+                                <p className="text-gray-600 text-sm">
+                                    {generalSettings?.storeTagline || 'Solusi Kesehatan Terpercaya'}
+                                </p>
                             </div>
                         </div>
                         
@@ -124,9 +140,21 @@ export default function LoginForm() {
                         <div className="bg-white/80 backdrop-blur-xl shadow-2xl rounded-3xl p-8 md:p-10 border border-white/20">
                             {/* Mobile Logo */}
                             <div className="md:hidden flex justify-center mb-6">
-                                <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-xl">
-                                    <span className="text-white font-bold text-3xl">A</span>
-                                </div>
+                                {generalSettings?.storeLogo ? (
+                                    <div className="w-16 h-16 rounded-2xl overflow-hidden bg-white shadow-xl p-2">
+                                        <img 
+                                            src={generalSettings.storeLogo} 
+                                            alt={generalSettings.storeName || 'Logo'} 
+                                            className="w-full h-full object-contain"
+                                        />
+                                    </div>
+                                ) : (
+                                    <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-xl">
+                                        <span className="text-white font-bold text-3xl">
+                                            {(generalSettings?.storeName || 'A').charAt(0).toUpperCase()}
+                                        </span>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="text-center mb-8">
@@ -241,7 +269,7 @@ export default function LoginForm() {
 
                         {/* Footer */}
                         <p className="mt-6 text-center text-sm text-gray-600">
-                            © 2024 Apotik POS. All rights reserved.
+                            © {new Date().getFullYear()} {generalSettings?.storeName || 'Apotik POS'}. All rights reserved.
                         </p>
                     </div>
                 </div>
