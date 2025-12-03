@@ -2,12 +2,14 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Users, Package, ShoppingBag, ShoppingCart, LogOut } from 'lucide-react'
+import { LayoutDashboard, Users, Package, ShoppingBag, ShoppingCart, LogOut, BarChart3, TrendingUp } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
 const navigation = [
     { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
+    { name: 'KPI', href: '/admin/kpi', icon: BarChart3 },
+    { name: 'Laporan', href: '/admin/reports', icon: TrendingUp },
     { name: 'Users', href: '/admin/users', icon: Users },
     { name: 'Products', href: '/admin/products', icon: Package },
     { name: 'Orders', href: '/admin/orders', icon: ShoppingBag },
