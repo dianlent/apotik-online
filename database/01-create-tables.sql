@@ -143,6 +143,45 @@ CREATE INDEX IF NOT EXISTS idx_inventory_logs_product ON inventory_logs(product_
 CREATE INDEX IF NOT EXISTS idx_inventory_logs_created_at ON inventory_logs(created_at DESC);
 
 -- =====================================================
+-- Table: stock_opname_sessions
+-- =====================================================
+CREATE TABLE IF NOT EXISTS stock_opname_sessions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    reference_code TEXT UNIQUE NOT NULL,
+    status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'in_progress', 'completed')),
+    notes TEXT,
+    created_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
+    started_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    completed_at TIMESTAMP WITH TIME ZONE,
+    total_items INTEGER DEFAULT 0,
+    total_adjusted INTEGER DEFAULT 0,
+    total_difference INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_stock_opname_sessions_status ON stock_opname_sessions(status);
+CREATE INDEX IF NOT EXISTS idx_stock_opname_sessions_created_at ON stock_opname_sessions(created_at DESC);
+
+-- =====================================================
+-- Table: stock_opname_items
+-- =====================================================
+CREATE TABLE IF NOT EXISTS stock_opname_items (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    session_id UUID NOT NULL REFERENCES stock_opname_sessions(id) ON DELETE CASCADE,
+    product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    system_stock INTEGER NOT NULL DEFAULT 0,
+    counted_stock INTEGER,
+    note TEXT,
+    difference INTEGER GENERATED ALWAYS AS (COALESCE(counted_stock, system_stock) - system_stock) STORED,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_stock_opname_items_unique_product ON stock_opname_items(session_id, product_id);
+CREATE INDEX IF NOT EXISTS idx_stock_opname_items_session ON stock_opname_items(session_id);
+CREATE INDEX IF NOT EXISTS idx_stock_opname_items_product ON stock_opname_items(product_id);
+
+-- =====================================================
 -- Table: settings
 -- =====================================================
 CREATE TABLE IF NOT EXISTS settings (
@@ -221,6 +260,12 @@ CREATE TRIGGER update_settings_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_stock_opname_sessions_updated_at ON stock_opname_sessions;
+CREATE TRIGGER update_stock_opname_sessions_updated_at
+    BEFORE UPDATE ON stock_opname_sessions
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
 -- =====================================================
 -- Enable Row Level Security (RLS)
 -- =====================================================
@@ -231,6 +276,8 @@ ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE vendors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE inventory_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE stock_opname_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE stock_opname_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
 
 -- =====================================================
@@ -313,6 +360,31 @@ CREATE POLICY "Admin can view inventory logs" ON inventory_logs FOR SELECT USING
 DROP POLICY IF EXISTS "Admin can create inventory logs" ON inventory_logs;
 CREATE POLICY "Admin can create inventory logs" ON inventory_logs FOR INSERT WITH CHECK (
     EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin', 'kasir'))
+);
+
+-- Stock Opname Sessions & Items: Admin/Apoteker
+DROP POLICY IF EXISTS "Staff can view stock opname sessions" ON stock_opname_sessions;
+CREATE POLICY "Staff can view stock opname sessions" ON stock_opname_sessions FOR SELECT USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin', 'apoteker'))
+);
+
+DROP POLICY IF EXISTS "Staff can manage stock opname sessions" ON stock_opname_sessions;
+CREATE POLICY "Staff can manage stock opname sessions" ON stock_opname_sessions FOR ALL USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin', 'apoteker'))
+) WITH CHECK (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin', 'apoteker'))
+);
+
+DROP POLICY IF EXISTS "Staff can view stock opname items" ON stock_opname_items;
+CREATE POLICY "Staff can view stock opname items" ON stock_opname_items FOR SELECT USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin', 'apoteker'))
+);
+
+DROP POLICY IF EXISTS "Staff can manage stock opname items" ON stock_opname_items;
+CREATE POLICY "Staff can manage stock opname items" ON stock_opname_items FOR ALL USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin', 'apoteker'))
+) WITH CHECK (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin', 'apoteker'))
 );
 
 -- Settings: Everyone can read, only admin can modify

@@ -18,7 +18,8 @@ import {
     FileText,
     TrendingUp,
     Truck,
-    Tag
+    Tag,
+    ClipboardList
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useSettings } from '@/context/SettingsContext'
@@ -65,6 +66,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             submenu: [
                 { name: 'All Products', href: '/admin/products', icon: Package },
                 { name: 'Inventory', href: '/admin/inventory', icon: Barcode },
+                { name: 'Stock Opname', href: '/admin/stock-opname', icon: ClipboardList },
                 { name: 'Categories', href: '/admin/categories', icon: Tag }
             ]
         },

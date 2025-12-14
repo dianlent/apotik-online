@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import AuthGuard from '@/components/AuthGuard'
 import { Product } from '@/types'
@@ -105,9 +106,17 @@ export default function InventoryPage() {
         <AuthGuard allowedRoles={['admin', 'apoteker']}>
             <div>
                 {/* Header */}
-                <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-gray-900">Inventory Management</h1>
-                    <p className="text-gray-600 mt-2">Monitor dan kelola stok produk</p>
+                <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                    <div>
+                        <h1 className="text-3xl font-bold text-gray-900">Inventory Management</h1>
+                        <p className="text-gray-600 mt-2">Monitor dan kelola stok produk</p>
+                    </div>
+                    <Link
+                        href="/admin/stock-opname"
+                        className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50 transition-colors font-semibold"
+                    >
+                        <span>Kelola Stock Opname</span>
+                    </Link>
                 </div>
 
                 {/* Stats Cards */}

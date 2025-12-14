@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import AuthGuard from '@/components/AuthGuard'
 import { Truck, Package, CheckCircle, Clock, MapPin, Phone, User, Calendar, Search, Printer, Download } from 'lucide-react'
@@ -63,6 +63,49 @@ export default function DeliveryPage() {
     const supabase = createClient()
     const { showToast } = useToast()
     const { generalSettings } = useSettings()
+    const readyToShipOrders = useMemo(() => orders.filter(order => order.status === 'paid'), [orders])
+    const inTransitOrders = useMemo(() => orders.filter(order => order.status === 'shipped'), [orders])
+    const todayShipments = useMemo(() => {
+        const now = new Date()
+        return orders.filter(order => {
+            const created = new Date(order.created_at)
+            return (
+                created.getDate() === now.getDate() &&
+                created.getMonth() === now.getMonth() &&
+                created.getFullYear() === now.getFullYear()
+            )
+        }).length
+    }, [orders])
+    const totalShippingValue = useMemo(
+        () => orders.reduce((sum, order) => sum + (order.shipping_cost || 0), 0),
+        [orders]
+    )
+    const averageDeliveryValue = useMemo(() => {
+        const delivered = orders.filter(order => ['shipped', 'completed'].includes(order.status))
+        if (!delivered.length) return 0
+        const totalValue = delivered.reduce((sum, order) => sum + order.total, 0)
+        return Math.round(totalValue / delivered.length)
+    }, [orders])
+    const statusTabs = useMemo(
+        () => [
+            { key: 'all', label: 'Semua', count: stats.total },
+            { key: 'pending', label: 'Menunggu Pembayaran', count: stats.pending },
+            { key: 'paid', label: 'Siap Dikirim', count: stats.paid },
+            { key: 'shipped', label: 'Dalam Pengiriman', count: stats.shipped },
+            { key: 'completed', label: 'Selesai', count: stats.completed },
+            { key: 'cancelled', label: 'Batal', count: stats.cancelled }
+        ],
+        [stats]
+    )
+    const shippingStatusOptions = [
+        { value: 'pending', label: 'Menunggu Pembayaran' },
+        { value: 'paid', label: 'Menunggu Pengiriman' },
+        { value: 'shipped', label: 'Dalam Pengiriman' },
+        { value: 'completed', label: 'Selesai' },
+        { value: 'cancelled', label: 'Dibatalkan' }
+    ]
+
+    const formatCurrency = (value: number) => `Rp ${value.toLocaleString('id-ID')}`
 
     useEffect(() => {
         loadOrders()
@@ -283,8 +326,70 @@ export default function DeliveryPage() {
                         </div>
                     </div>
 
+                    {/* Delivery Insights */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                        <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide">Pengiriman Hari Ini</p>
+                                    <p className="text-3xl font-bold text-gray-900 mt-2">{todayShipments}</p>
+                                </div>
+                                <div className="p-3 rounded-full bg-blue-50">
+                                    <Calendar className="h-5 w-5 text-blue-600" />
+                                </div>
+                            </div>
+                            <p className="text-sm text-gray-500 mt-3">Jumlah pesanan yang dibuat hari ini</p>
+                        </div>
+                        <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-xs font-semibold text-purple-600 uppercase tracking-wide">Total Ongkir</p>
+                                    <p className="text-3xl font-bold text-gray-900 mt-2">{formatCurrency(totalShippingValue)}</p>
+                                </div>
+                                <div className="p-3 rounded-full bg-purple-50">
+                                    <Download className="h-5 w-5 text-purple-600" />
+                                </div>
+                            </div>
+                            <p className="text-sm text-gray-500 mt-3">Akumulasi biaya pengiriman semua pesanan</p>
+                        </div>
+                        <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-xs font-semibold text-emerald-600 uppercase tracking-wide">Nilai Rata-rata</p>
+                                    <p className="text-3xl font-bold text-gray-900 mt-2">{formatCurrency(averageDeliveryValue)}</p>
+                                </div>
+                                <div className="p-3 rounded-full bg-emerald-50">
+                                    <Package className="h-5 w-5 text-emerald-600" />
+                                </div>
+                            </div>
+                            <p className="text-sm text-gray-500 mt-3">Nilai rata-rata pesanan yang sudah dikirim</p>
+                        </div>
+                    </div>
+
                     {/* Filters */}
                     <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+                        <div className="flex flex-wrap gap-2 mb-4">
+                            {statusTabs.map(tab => (
+                                <button
+                                    key={tab.key}
+                                    onClick={() => setStatusFilter(tab.key)}
+                                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-medium transition-colors ${
+                                        statusFilter === tab.key
+                                            ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                                            : 'border-gray-200 text-gray-700 hover:border-blue-200 hover:text-blue-600'
+                                    }`}
+                                >
+                                    <span>{tab.label}</span>
+                                    <span
+                                        className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                                            statusFilter === tab.key ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-700'
+                                        }`}
+                                    >
+                                        {tab.count}
+                                    </span>
+                                </button>
+                            ))}
+                        </div>
                         <div className="flex flex-col md:flex-row gap-4">
                             {/* Search */}
                             <div className="flex-1 relative">
@@ -311,6 +416,102 @@ export default function DeliveryPage() {
                                 <option value="completed">Selesai</option>
                                 <option value="cancelled">Dibatalkan</option>
                             </select>
+                        </div>
+                    </div>
+
+                    {/* Delivery Queue */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                            <div className="flex items-center justify-between mb-4">
+                                <div>
+                                    <p className="text-sm font-semibold text-gray-900">Siap Dikirim</p>
+                                    <p className="text-xs text-gray-500">Pesanan dengan status paid</p>
+                                </div>
+                                <span className="text-sm font-semibold text-blue-600">{readyToShipOrders.length}</span>
+                            </div>
+                            <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                                {readyToShipOrders.length === 0 && (
+                                    <p className="text-sm text-gray-500">Belum ada pesanan yang siap dikirim.</p>
+                                )}
+                                {readyToShipOrders.slice(0, 5).map(order => (
+                                    <div key={order.id} className="border border-gray-100 rounded-lg p-3">
+                                        <div className="flex items-center justify-between">
+                                            <p className="text-sm font-semibold text-gray-900">
+                                                {order.profiles?.full_name || order.shipping_name || 'Customer'}
+                                            </p>
+                                            <span className="text-xs font-mono text-gray-500">
+                                                {order.order_number || `#${order.id.slice(0, 8).toUpperCase()}`}
+                                            </span>
+                                        </div>
+                                        <p className="text-xs text-gray-500">
+                                            {new Date(order.created_at).toLocaleString('id-ID')}
+                                        </p>
+                                        <p className="text-xs text-gray-600 mt-1 truncate">
+                                            {order.shipping_address || 'Alamat belum diisi'}
+                                        </p>
+                                        <div className="flex items-center justify-between mt-2">
+                                            <span className="text-sm font-semibold text-gray-900">
+                                                {formatCurrency(order.total)}
+                                            </span>
+                                            <button
+                                                onClick={() => updateOrderStatus(order.id, 'shipped')}
+                                                disabled={updatingStatus === order.id}
+                                                className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50"
+                                            >
+                                                <Truck className="h-3.5 w-3.5" />
+                                                {updatingStatus === order.id ? 'Memproses' : 'Kirim'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                            <div className="flex items-center justify-between mb-4">
+                                <div>
+                                    <p className="text-sm font-semibold text-gray-900">Dalam Pengiriman</p>
+                                    <p className="text-xs text-gray-500">Siap ditandai selesai</p>
+                                </div>
+                                <span className="text-sm font-semibold text-green-600">{inTransitOrders.length}</span>
+                            </div>
+                            <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                                {inTransitOrders.length === 0 && (
+                                    <p className="text-sm text-gray-500">Tidak ada pesanan dalam perjalanan.</p>
+                                )}
+                                {inTransitOrders.slice(0, 5).map(order => (
+                                    <div key={order.id} className="border border-gray-100 rounded-lg p-3 bg-gradient-to-r from-green-50 to-white">
+                                        <div className="flex items-center justify-between">
+                                            <p className="text-sm font-semibold text-gray-900">
+                                                {order.profiles?.full_name || order.shipping_name || 'Customer'}
+                                            </p>
+                                            <span className="text-xs font-mono text-gray-500">
+                                                {order.order_number || `#${order.id.slice(0, 8).toUpperCase()}`}
+                                            </span>
+                                        </div>
+                                        <p className="text-xs text-gray-500">
+                                            {new Date(order.created_at).toLocaleString('id-ID')}
+                                        </p>
+                                        <div className="flex items-center gap-2 text-xs text-gray-600 mt-1">
+                                            <MapPin className="h-3.5 w-3.5 text-gray-400" />
+                                            <span className="truncate block w-full">{order.shipping_address || 'Alamat belum diisi'}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between mt-2">
+                                            <span className="text-sm font-semibold text-gray-900">
+                                                {formatCurrency(order.total)}
+                                            </span>
+                                            <button
+                                                onClick={() => updateOrderStatus(order.id, 'completed')}
+                                                disabled={updatingStatus === order.id}
+                                                className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50"
+                                            >
+                                                <CheckCircle className="h-3.5 w-3.5" />
+                                                {updatingStatus === order.id ? 'Memproses' : 'Selesai'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     </div>
 
@@ -395,7 +596,11 @@ export default function DeliveryPage() {
                                                 </td>
                                                 <td className="py-4 px-6 text-center">
                                                     <select
-                                                        value={order.status}
+                                                        value={
+                                                            shippingStatusOptions.some(option => option.value === order.status)
+                                                                ? order.status
+                                                                : 'paid'
+                                                        }
                                                         onChange={(e) => updateOrderStatus(order.id, e.target.value)}
                                                         disabled={updatingStatus === order.id}
                                                         className={`px-3 py-1.5 rounded-lg text-xs font-semibold border-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer ${
@@ -410,10 +615,11 @@ export default function DeliveryPage() {
                                                                 : 'bg-red-50 border-red-200 text-red-800 hover:bg-red-100'
                                                         }`}
                                                     >
-                                                        <option value="paid">Menunggu Pengiriman</option>
-                                                        <option value="shipped">Dalam Pengiriman</option>
-                                                        <option value="completed">Selesai</option>
-                                                        <option value="cancelled">Dibatalkan</option>
+                                                        {shippingStatusOptions.map(option => (
+                                                            <option key={option.value} value={option.value}>
+                                                                {option.label}
+                                                            </option>
+                                                        ))}
                                                     </select>
                                                 </td>
                                                 <td className="py-4 px-6 text-center">

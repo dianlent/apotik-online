@@ -35,6 +35,7 @@ A modern, full-featured Point of Sale (POS) and e-commerce platform for pharmaci
 - **Product Management**: Add, edit, delete, and manage products
 - **Category Management**: Organize products into categories
 - **Inventory Tracking**: Monitor stock levels and get low-stock alerts
+- **Stock Opname Management**: Run physical count sessions, capture variance, and sync back to system stock
 - **Order Management**: View, process, and fulfill orders
 - **User Management**: Manage customers and staff accounts
 - **Delivery Management**: Track and manage deliveries
@@ -162,6 +163,7 @@ pos-apotik/
 │   │   ├── categories/     # Category management
 │   │   ├── delivery/       # Delivery management
 │   │   ├── inventory/      # Inventory tracking
+│   │   ├── stock-opname/   # Stock opname management
 │   │   ├── orders/         # Order management
 │   │   ├── products/       # Product management
 │   │   ├── reports/        # Sales reports & analytics
@@ -220,6 +222,8 @@ The application uses Supabase (PostgreSQL) with the following main tables:
 - **orders**: Customer orders
 - **order_items**: Order line items
 - **payments**: Payment transactions
+- **stock_opname_sessions**: Stock opname sessions (physical stock counts)
+- **stock_opname_items**: Product-level entries inside stock opname sessions
 - **carts**: Shopping cart items
 - **cart_items**: Cart line items
 

@@ -127,7 +127,9 @@ psql "postgresql://[user]:[password]@[host]:[port]/[database]" -f seed-pharmacy-
 5. **order_items** - Item dalam pesanan
 6. **vendors** - Data supplier/vendor
 7. **inventory_logs** - Log perubahan stok
-8. **settings** - Pengaturan aplikasi
+8. **stock_opname_sessions** - Sesi stok opname (perhitungan fisik)
+9. **stock_opname_items** - Detail per-produk dalam sesi stok opname
+10. **settings** - Pengaturan aplikasi
 
 ### Features:
 - ✅ UUID sebagai primary key

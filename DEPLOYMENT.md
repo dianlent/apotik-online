@@ -70,6 +70,7 @@ Go to Supabase SQL Editor and run:
 -- 2. add_barcode_to_products.sql
 -- 3. create_payments_table.sql
 -- 4. add_payment_fields_to_orders.sql
+-- 5. 006_create_stock_opname_tables.sql (untuk fitur stock opname)
 ```
 
 ### 2. Configure Payment Gateway (Optional)
